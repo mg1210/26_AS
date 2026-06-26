@@ -112,17 +112,22 @@ class ValidationAgent(BaseAgent):
         X_all  = df_eng[available_feats].fillna(0)
         probs  = model.predict_proba(X_all)[:, 1]
 
-        # Split by issue_year if available, else random 50/50
+        # Split 70/30: chronological if issue_year available, otherwise positional
+        split = int(len(probs) * 0.7)
         if "issue_year" in df_eng.columns:
-            years  = df_eng["issue_year"].sort_values().unique()
-            mid    = years[len(years) // 2]
-            mask   = df_eng["issue_year"] <= mid
-            label  = f"pre-{mid} vs post-{mid}"
+            order = df_eng["issue_year"].argsort().values
+            ref_idx    = order[:split]
+            sample_idx = order[split:]
+            years      = df_eng["issue_year"].iloc[order]
+            label      = f"earliest 70% vs latest 30% by issue_year"
+            ref_probs    = probs[ref_idx]
+            sample_probs = probs[sample_idx]
         else:
-            mask  = np.random.rand(len(probs)) > 0.5
-            label = "random split A vs B"
+            ref_probs    = probs[:split]
+            sample_probs = probs[split:]
+            label        = "first 70% rows vs last 30% rows"
 
-        psi = self._compute_psi(probs[mask], probs[~mask])
+        psi = self._compute_psi(ref_probs, sample_probs)
         self._info(f"PSI ({label}) = {psi:.4f}")
 
         state.psi_results = {
