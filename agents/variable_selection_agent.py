@@ -40,8 +40,12 @@ class VariableSelectionAgent(BaseAgent):
         target = "target"
 
         # Separate features and target
-        feature_cols = [c for c in df.columns if c != target
-                        and df[c].dtype != object]
+        feature_cols = [c for c in df.columns
+                        if c != target
+                        and c != "loan_status"
+                        and df[c].dtype != object
+                        and str(df[c].dtype) != 'large_string'
+                        and pd.api.types.is_numeric_dtype(df[c])]
         X = df[feature_cols]
         y = df[target]
 
@@ -132,7 +136,8 @@ class VariableSelectionAgent(BaseAgent):
 
     # ─────────────────────────────────────────────────────────────
     def _correlation_analysis(self, state: PipelineState, X: pd.DataFrame) -> PipelineState:
-        corr = X.corr().abs()
+        X_num = X.apply(pd.to_numeric, errors='coerce').select_dtypes(include=[np.number]).fillna(0)
+        corr = X_num.corr().abs()
         state.correlation_matrix = corr
 
         # Find highly correlated pairs

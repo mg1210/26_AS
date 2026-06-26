@@ -61,6 +61,8 @@ class ValidationAgent(BaseAgent):
     # ─────────────────────────────────────────────────────────────
     def _discrimination(self, state: PipelineState) -> PipelineState:
         model  = state.champion_model
+        if model is None:
+            return state
         X_te   = state.X_test
         y_te   = state.y_test
 

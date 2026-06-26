@@ -282,10 +282,9 @@ class FeatureEngineeringAgent(BaseAgent):
             if n_miss == 0:
                 continue
             if df[col].dtype in [object]:
-                df[col].fillna(df[col].mode()[0] if not df[col].mode().empty else "unknown",
-                               inplace=True)
+                df[col] = df[col].fillna(df[col].mode()[0] if not df[col].mode().empty else "unknown")
             else:
-                df[col].fillna(df[col].median(), inplace=True)
+                df[col] = df[col].fillna(df[col].median())
         return df
 
     # ─────────────────────────────────────────────────────────────

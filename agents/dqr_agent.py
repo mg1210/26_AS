@@ -104,6 +104,8 @@ class DQRAgent(BaseAgent):
         for col in num_cols:
             if col not in df.columns:
                 continue
+            if df[col].dtype == object or str(df[col].dtype) == 'large_string':
+                continue
             s = df[col].dropna()
             if len(s) < 10:
                 continue
