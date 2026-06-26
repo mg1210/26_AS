@@ -52,10 +52,8 @@ class ExplainabilityAgent(BaseAgent):
     # ─────────────────────────────────────────────────────────────
     def _compute_shap(self, state: PipelineState, model, X_test, name: str) -> PipelineState:
         # Sample for speed
-        n_rows = int(X_test.shape[0])
-        n = min(int(self.shap_sample), n_rows)
-        idx = np.random.choice(n_rows, n, replace=False)
-        X_sample = X_test.iloc[idx]
+        print(f"  [SHAP debug] X_test type={type(X_test)}, len={len(X_test)}, shape={X_test.shape}")
+        X_sample = X_test.sample(n=min(2000, len(X_test)), random_state=42)
 
         try:
             if name in ("XGBoost", "RandomForest"):
