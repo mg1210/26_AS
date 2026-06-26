@@ -61,9 +61,11 @@ class ExplainabilityAgent(BaseAgent):
             if name in ("XGBoost", "RandomForest"):
                 explainer  = shap.TreeExplainer(model)
                 shap_vals  = explainer.shap_values(X_sample)
-                # For binary classifiers, shap_values may return list [neg, pos]
+                # shap_values may return list [neg, pos] or 3D array (samples, features, classes)
                 if isinstance(shap_vals, list):
                     shap_vals = shap_vals[1]
+                elif hasattr(shap_vals, 'ndim') and shap_vals.ndim == 3:
+                    shap_vals = shap_vals[:, :, 1]
             else:
                 # Logistic Regression — use linear explainer via background
                 explainer = shap.LinearExplainer(

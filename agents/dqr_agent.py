@@ -151,18 +151,22 @@ class DQRAgent(BaseAgent):
                     "missing_pct" : round(float(df[col].isna().mean()), 4),
                 }
             else:
-                profiles[col] = {
-                    "type"        : "numeric",
-                    "mean"        : round(float(s.mean()), 4),
-                    "std"         : round(float(s.std()), 4),
-                    "p5"          : round(float(s.quantile(0.05)), 4),
-                    "p25"         : round(float(s.quantile(0.25)), 4),
-                    "median"      : round(float(s.median()), 4),
-                    "p75"         : round(float(s.quantile(0.75)), 4),
-                    "p95"         : round(float(s.quantile(0.95)), 4),
-                    "skewness"    : round(float(s.skew()), 4),
-                    "missing_pct" : round(float(df[col].isna().mean()), 4),
-                }
+                try:
+                    s = pd.to_numeric(s, errors='coerce').dropna()
+                    profiles[col] = {
+                        "type"        : "numeric",
+                        "mean"        : round(float(s.mean()), 4),
+                        "std"         : round(float(s.std()), 4),
+                        "p5"          : round(float(s.quantile(0.05)), 4),
+                        "p25"         : round(float(s.quantile(0.25)), 4),
+                        "median"      : round(float(s.median()), 4),
+                        "p75"         : round(float(s.quantile(0.75)), 4),
+                        "p95"         : round(float(s.quantile(0.95)), 4),
+                        "skewness"    : round(float(s.skew()), 4),
+                        "missing_pct" : round(float(df[col].isna().mean()), 4),
+                    }
+                except Exception:
+                    pass
         state.dqr_report["distributions"] = profiles
         return state
 
