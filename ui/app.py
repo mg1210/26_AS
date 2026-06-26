@@ -155,6 +155,41 @@ st.markdown(f"## 🏆 Champion: **{champion}** &nbsp; {badge}", unsafe_allow_htm
 st.caption(f"Run: {run_id}  |  Dataset: {dataset}  |  Loaded from: {os.path.basename(audit_path)}")
 st.markdown("---")
 
+# ── Pipeline phase tracker ────────────────────────────────────────────────────
+PHASES = [
+    ("Data Understanding", "DataUnderstandingAgent"),
+    ("DQR",               "DQRAgent"),
+    ("Feature Eng.",      "FeatureEngineeringAgent"),
+    ("Variable Selection","VariableSelectionAgent"),
+    ("Model Dev.",        "ModelDevelopmentAgent"),
+    ("Explainability",    "ExplainabilityAgent"),
+    ("Validation",        "ValidationAgent"),
+]
+
+completed_agents = {
+    e["agent"]
+    for e in audit_log
+    if e.get("action") == "completed"
+}
+
+phase_cols = st.columns(7)
+for col, (label, agent) in zip(phase_cols, PHASES):
+    done = agent in completed_agents
+    bg   = "#1a3a1a" if done else "#2a2a3a"
+    border = "#a6e3a1" if done else "#45475a"
+    icon = "✓" if done else "○"
+    icon_color = "#a6e3a1" if done else "#6c7086"
+    col.markdown(
+        f"""<div style="background:{bg};border:1px solid {border};border-radius:8px;
+        padding:10px 6px;text-align:center;">
+        <div style="font-size:1.3rem;color:{icon_color};font-weight:700;">{icon}</div>
+        <div style="font-size:0.7rem;color:#cdd6f4;margin-top:4px;line-height:1.3;">{label}</div>
+        </div>""",
+        unsafe_allow_html=True,
+    )
+
+st.markdown("<br>", unsafe_allow_html=True)
+
 # ── Metric cards ──────────────────────────────────────────────────────────────
 c1, c2, c3, c4, c5, c6 = st.columns(6)
 card(c1, "AUC",       auc,  "area under ROC")
