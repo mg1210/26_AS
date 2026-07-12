@@ -20,6 +20,7 @@ from sklearn.model_selection import cross_val_score
 from core.base_agent import BaseAgent
 from core.state import PipelineState
 from core.llm import ask, CREDIT_RISK_SYSTEM
+from core.recommendation import Recommendation
 
 
 # IV thresholds (standard industry practice)
@@ -65,6 +66,53 @@ class VariableSelectionAgent(BaseAgent):
 
         self._log("Asking LLM for selection rationale …")
         state = self._llm_rationale(state)
+
+        # Build structured response
+        iv_df    = state.iv_table
+        top3     = []
+        if iv_df is not None and len(iv_df) > 0:
+            top_rows = iv_df.head(3) if isinstance(iv_df, pd.DataFrame) else []
+            for _, row in (top_rows.iterrows() if hasattr(top_rows, "iterrows") else []):
+                top3.append(f"{row.get('feature','?')} (IV={row.get('iv','?')})")
+
+        state.agent_responses[self.name] = self.build_response(
+            summary="Variable selection complete",
+            observations=[
+                f"Candidate features evaluated: {len(feature_cols)}",
+                f"Features selected: {len(state.selected_features)}",
+                f"Features rejected: {len(state.rejected_features)}",
+                f"Top features by IV: {', '.join(top3) if top3 else 'N/A'}",
+                f"IV threshold applied: {IV_USELESS} (useless below this)",
+            ],
+            reasoning=(
+                f"IV threshold {IV_USELESS} applied — features below this have insufficient "
+                "discriminatory power for credit risk modelling. "
+                "High correlation pairs resolved by keeping the feature with higher IV. "
+                "Final shortlist capped at 25 features to prevent overfitting."
+            ),
+            recommendations=[
+                "Review rejected features — some may have business value not captured by IV",
+                "Validate WOE bins for monotonicity before scorecard deployment",
+                "Consider interaction features between top IV variables",
+                f"Ensure all {len(state.selected_features)} selected features pass regulatory scrutiny",
+            ],
+            artifacts={"iv_threshold": IV_USELESS, "max_features": MAX_FEATURES},
+        )
+
+        rationale = (
+            state.dqr_report.get("variable_selection_rationale")
+            or f"IV threshold {IV_USELESS} applied. "
+               f"{len(state.selected_features)} features selected from {len(feature_cols)} candidates. "
+               f"High-correlation pairs resolved by retaining higher-IV feature."
+        )
+        state.recommendations.append(Recommendation(
+            title="Feature Shortlist",
+            recommendation=f"{len(state.selected_features)} features selected for modelling",
+            rationale=rationale,
+            confidence=0.85,
+            risk="low",
+            requires_human_approval=True,
+        ))
 
         return state
 
@@ -128,11 +176,11 @@ class VariableSelectionAgent(BaseAgent):
         return round(iv, 4), woe_map
 
     def _iv_label(self, iv: float) -> str:
-        if iv < IV_USELESS: return "Useless"
-        if iv < 0.10:       return "Weak"
-        if iv < IV_STRONG:  return "Medium"
-        if iv < 0.50:       return "Strong"
-        return "Suspicious"
+        if iv < 0.02:  return "Useless"
+        if iv < 0.10:  return "Weak"
+        if iv < 0.30:  return "Medium"
+        if iv <= 0.50: return "Strong"
+        return "Suspicious (>0.50)"
 
     # ─────────────────────────────────────────────────────────────
     def _correlation_analysis(self, state: PipelineState, X: pd.DataFrame) -> PipelineState:
@@ -190,8 +238,10 @@ class VariableSelectionAgent(BaseAgent):
             if iv < IV_USELESS:
                 rejected[feat] = f"IV too low ({iv:.4f} < {IV_USELESS})"
                 continue
-            if row["strength"] == "Suspicious":
-                rejected[feat] = f"Suspicious IV ({iv:.4f} > 0.5) — possible leakage"
+            if iv > 0.50:
+                rejected[feat] = (f"Suspicious IV ({iv:.4f} > 0.50) — potential leakage or "
+                                  f"overfitting. Confirm variable is free of target leakage "
+                                  f"before including.")
                 continue
             selected.append(feat)
 

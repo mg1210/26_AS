@@ -8,6 +8,7 @@ Enforces a consistent run() interface and audit logging.
 from abc import ABC, abstractmethod
 from core.state import PipelineState
 import traceback
+import time
 
 
 class BaseAgent(ABC):
@@ -19,10 +20,12 @@ class BaseAgent(ABC):
     def __init__(self, name: str, verbose: bool = True):
         self.name = name
         self.verbose = verbose
+        self._start_time: float = 0.0
 
     def execute(self, state: PipelineState) -> PipelineState:
         """Public entry point. Wraps run() with logging and error handling."""
         self._log(f"▶  Starting")
+        self._start_time = time.time()
         state.log_audit(self.name, "started")
         try:
             state = self.run(state)
@@ -35,6 +38,27 @@ class BaseAgent(ABC):
             if self.verbose:
                 traceback.print_exc()
         return state
+
+    def build_response(
+        self,
+        summary: str,
+        observations: list,
+        reasoning: str,
+        recommendations: list,
+        artifacts: dict = None,
+        overall_status: str = "success",
+    ) -> dict:
+        """Return a structured agent response dict."""
+        return {
+            "agent_name":     self.name,
+            "summary":        summary,
+            "observations":   observations,
+            "reasoning":      reasoning,
+            "recommendations": recommendations,
+            "artifacts":      artifacts or {},
+            "execution_time": round(time.time() - self._start_time, 2),
+            "overall_status": overall_status,
+        }
 
     @abstractmethod
     def run(self, state: PipelineState) -> PipelineState:

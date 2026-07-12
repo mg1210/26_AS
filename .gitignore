@@ -10,6 +10,8 @@ build/
 
 # Environments
 .env
+*.env
+.env.*
 .venv
 env/
 venv/
@@ -19,9 +21,8 @@ data/*.csv
 data/*.xlsx
 data/*.parquet
 
-# Outputs — keep JSON/txt results, ignore large model artefacts
-outputs/*.pkl
-outputs/*.joblib
+# Outputs — full directory excluded (contains run artefacts and audit trails)
+outputs/
 
 # API keys — never commit
 .streamlit/secrets.toml

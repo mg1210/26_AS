@@ -44,8 +44,37 @@ class ExplainabilityAgent(BaseAgent):
         self._log("Building adverse-action reason codes …")
         state = self._adverse_action(state, X_test)
 
+        self._log("Running fairness / bias assessment …")
+        state = self._fairness_assessment(state)
+
         self._log("Generating LLM explanation narrative …")
         state = self._llm_narrative(state)
+
+        # Build structured response
+        top5 = sorted(state.feature_importance.items(), key=lambda x: x[1], reverse=True)[:5]
+        top5_strs = [f"{f} ({v:.4f})" for f, v in top5]
+        state.agent_responses[self.name] = self.build_response(
+            summary="Explainability analysis complete",
+            observations=[
+                f"SHAP values computed for champion model: {name}",
+                f"Features with SHAP importance: {len(state.feature_importance)}",
+                f"Top 5 features by mean |SHAP|: {', '.join(top5_strs) if top5_strs else 'N/A'}",
+                f"Adverse action codes generated for {len(state.adverse_action_codes)} sample applicants",
+            ],
+            reasoning=(
+                "SHAP TreeExplainer used for tree-based models (XGBoost, RandomForest, GradientBoosting); "
+                "KernelExplainer fallback used for Logistic Regression. "
+                "Mean absolute SHAP value used as global feature importance metric. "
+                "Adverse action codes derived from top negative SHAP contributors per applicant."
+            ),
+            recommendations=[
+                "Review top SHAP features for regulatory and fairness concerns",
+                "Ensure adverse action codes map to standard industry reason codes",
+                "Conduct disparate impact analysis on protected attribute proxies",
+                "Document SHAP findings in model risk management documentation",
+            ],
+            artifacts={"top_features": dict(top5)},
+        )
 
         return state
 
@@ -56,7 +85,7 @@ class ExplainabilityAgent(BaseAgent):
         X_sample = X_test.sample(n=min(2000, len(X_test)), random_state=42)
 
         try:
-            if name in ("XGBoost", "RandomForest"):
+            if name in ("XGBoost", "RandomForest", "LightGBM", "GradientBoosting_AutoML"):
                 explainer  = shap.TreeExplainer(model)
                 shap_vals  = explainer.shap_values(X_sample)
                 # shap_values may return list [neg, pos] or 3D array (samples, features, classes)
@@ -91,6 +120,22 @@ class ExplainabilityAgent(BaseAgent):
             self._info(f"SHAP computed on {len(X_sample)} samples")
             self._info(f"Top 5 SHAP features: "
                        f"{list(state.feature_importance.keys())[:5]}")
+
+            # Persist a sample of SHAP + feature values so the UI can draw a beeswarm.
+            try:
+                import json as _json, os as _os
+                _os.makedirs('outputs/models', exist_ok=True)
+                _n = min(500, len(X_sample))
+                shap_payload = {
+                    'feature_names':  feat_names,
+                    'shap_values':    np.asarray(shap_vals)[:_n].tolist(),
+                    'feature_values': X_sample.iloc[:_n].to_numpy().tolist(),
+                }
+                with open(f'outputs/models/{state.run_id}_shap_sample.json', 'w') as _f:
+                    _json.dump(shap_payload, _f)
+                self._info(f"SHAP sample saved for UI beeswarm ({_n} rows)")
+            except Exception as _e:
+                state.log_warning(self.name, f"Could not save SHAP sample: {_e}")
         except Exception as e:
             state.log_warning(self.name, f"SHAP failed: {e} — falling back to RF importance")
             # Fall back to model feature importances
@@ -98,6 +143,71 @@ class ExplainabilityAgent(BaseAgent):
                 imp = dict(zip(X_test.columns, model.feature_importances_))
                 state.feature_importance = dict(sorted(imp.items(), key=lambda x: -x[1]))
 
+        return state
+
+    # ─────────────────────────────────────────────────────────────
+    def _fairness_assessment(self, state: PipelineState) -> PipelineState:
+        """Per-group predicted-risk parity across proxy protected attributes,
+        computed on the test set and persisted to state (so it lands in the audit
+        trail and the report, not just the UI)."""
+        if state.champion_model is None or state.X_test is None:
+            return state
+        if state.engineered_df is None:
+            return state
+
+        proxy_attrs = ['verification_status', 'home_ownership', 'purpose', 'addr_state']
+        y_prob = state.champion_model.predict_proba(state.X_test)[:, 1]
+
+        fairness_results = {}
+        for attr in proxy_attrs:
+            source_col = attr if (state.raw_df is not None and attr in state.raw_df.columns) else None
+            if source_col is None:
+                continue
+            try:
+                attr_vals = (state.raw_df.loc[state.X_test.index, source_col]
+                             if hasattr(state.X_test, 'index') else None)
+                if attr_vals is None:
+                    continue
+
+                df_fair = pd.DataFrame({
+                    'group':          attr_vals.values,
+                    'predicted_prob': y_prob,
+                    'actual':         state.y_test.values,
+                })
+                overall_mean = df_fair['predicted_prob'].mean()
+                group_stats = df_fair.groupby('group').agg(
+                    count=('predicted_prob', 'size'),
+                    mean_predicted=('predicted_prob', 'mean'),
+                    actual_rate=('actual', 'mean'),
+                ).reset_index()
+                group_stats = group_stats[group_stats['count'] >= 30]
+                group_stats['diff_from_avg'] = group_stats['mean_predicted'] - overall_mean
+                group_stats['concern_level'] = group_stats['diff_from_avg'].abs().apply(
+                    lambda d: 'High' if d > 0.15 else 'Medium' if d > 0.10 else 'Low')
+
+                fairness_results[attr] = {
+                    str(row['group']): {
+                        'count':          int(row['count']),
+                        'mean_predicted': round(float(row['mean_predicted']), 4),
+                        'actual_rate':    round(float(row['actual_rate']), 4),
+                        'diff_from_avg':  round(float(row['diff_from_avg']), 4),
+                        'concern_level':  row['concern_level'],
+                    }
+                    for _, row in group_stats.iterrows()
+                }
+                flagged = [k for k, v in fairness_results[attr].items()
+                           if v['concern_level'] in ('Medium', 'High')]
+                self._info(f"Fairness check — {attr}: {len(group_stats)} groups analysed, "
+                           f"{len(flagged)} flagged for review")
+            except Exception as e:
+                state.log_warning(self.name, f"Fairness check failed for {attr}: {e}")
+                continue
+
+        state.fairness_results = fairness_results
+        total_flagged = sum(1 for attr_data in fairness_results.values()
+                            for v in attr_data.values() if v['concern_level'] in ('Medium', 'High'))
+        self._info(f"Fairness assessment complete: {len(fairness_results)} attributes checked, "
+                   f"{total_flagged} groups flagged")
         return state
 
     # ─────────────────────────────────────────────────────────────

@@ -24,6 +24,7 @@ from agents.variable_selection_agent import VariableSelectionAgent
 from agents.model_development_agent import ModelDevelopmentAgent
 from agents.explainability_agent import ExplainabilityAgent
 from agents.validation_agent import ValidationAgent
+from agents.documentation_agent import DocumentationAgent
 
 
 BANNER = """
@@ -40,45 +41,57 @@ class CreditRiskOrchestrator:
                  output_dir: str = "outputs",
                  optuna_trials: int = 30,
                  auto_approve: bool = False,    # True = skip human prompts (demo mode)
-                 verbose: bool = True):
+                 verbose: bool = True,
+                 hyperparam_override: bool = False):
         self.output_dir    = output_dir
         self.optuna_trials = optuna_trials
         self.auto_approve  = auto_approve
         self.verbose       = verbose
+        self.hyperparam_override = hyperparam_override
         os.makedirs(output_dir, exist_ok=True)
 
     # ─────────────────────────────────────────────────────────────
-    def run(self, dataset_path: str, dataset_name: str = "") -> PipelineState:
+    def run(self, dataset_path: str, dataset_name: str = "",
+            target_col: str = "") -> PipelineState:
         """
         Main entry point.  Call this with a new CSV path and the entire
         pipeline re-runs automatically — Dataset 2 plug-and-play.
+
+        target_col: if non-empty, skips auto-detection and uses this column.
         """
         print(Fore.CYAN + BANNER)
 
         state = PipelineState(
             dataset_path=dataset_path,
             dataset_name=dataset_name or os.path.basename(dataset_path),
+            target_column=target_col,   # pre-set skips auto-detection in Phase 1
         )
+
+        # ── Scan data/ for an xlsx data dictionary ───────────────
+        import glob as _glob
+        _data_dir = os.path.dirname(dataset_path) or "data"
+        _xlsx_files = sorted(_glob.glob(os.path.join(_data_dir, "*.xlsx")))
+        _dict_path = _xlsx_files[0] if _xlsx_files else ""
+        if _dict_path:
+            print(f"  📖 Data dictionary found: {os.path.basename(_dict_path)}")
 
         # ── Agent registry (ordered) ──────────────────────────────
         phases = [
-            ("Phase 1 — Data Understanding",   DataUnderstandingAgent(self.verbose)),
+            ("Phase 1 — Data Understanding",   DataUnderstandingAgent(self.verbose, data_dict_path=_dict_path)),
             ("Phase 2 — Data Quality Review",  DQRAgent(verbose=self.verbose)),
             ("Phase 3 — Feature Engineering",  FeatureEngineeringAgent(self.verbose)),
             ("Phase 4 — Variable Selection",   VariableSelectionAgent(self.verbose)),
             ("Phase 5 — Model Development",    ModelDevelopmentAgent(
                                                    optuna_trials=self.optuna_trials,
-                                                   verbose=self.verbose)),
+                                                   verbose=self.verbose,
+                                                   hyperparam_override=self.hyperparam_override,
+                                                   output_dir=self.output_dir)),
             ("Phase 6 — Explainability",       ExplainabilityAgent(self.verbose)),
-            ("Phase 7 — Validation & Docs",    ValidationAgent(self.output_dir, self.verbose)),
+            ("Phase 7 — Validation",           ValidationAgent(self.output_dir, self.verbose)),
+            ("Phase 8 — Documentation",        DocumentationAgent(self.output_dir, self.verbose)),
         ]
 
         for i, (phase_name, agent) in enumerate(phases):
-            # Checkpoint 3 must be set BEFORE ValidationAgent runs so
-            # _save_audit() captures the approved flag in the JSON output
-            if i == 6 and self.auto_approve:
-                state.checkpoint_3_approved = True
-
             self._phase_header(phase_name)
             state = agent.execute(state)
 
@@ -98,6 +111,8 @@ class CreditRiskOrchestrator:
             if i == 6:   # After Validation — interactive mode still needs the prompt
                 if not self.auto_approve:
                     state = self._checkpoint_3(state)
+                elif self.auto_approve:
+                    state.checkpoint_3_approved = True
 
             # Halt on critical error
             if state.errors:

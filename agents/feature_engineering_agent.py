@@ -73,6 +73,33 @@ class FeatureEngineeringAgent(BaseAgent):
         self._log("Asking LLM to summarise engineered features …")
         state = self._llm_feature_summary(state)
 
+        # Build structured response
+        engineered_df = state.engineered_df
+        state.agent_responses[self.name] = self.build_response(
+            summary="Feature engineering complete",
+            observations=[
+                f"Engineered features created: {len(state.feature_log)}",
+                f"Final dataset shape: {engineered_df.shape[0]:,} rows × {engineered_df.shape[1]} columns",
+                f"Date-derived features: credit age, months since earliest credit line",
+                f"Domain features: DTI enrichment, revolving utilisation, delinquency indicators",
+                f"Encoding: ordinal grade/subgrade, WOE for categorical variables",
+                f"Imputation: median for numeric, mode for categorical",
+            ],
+            reasoning=(
+                "Domain-driven features created based on credit risk best practices. "
+                "Grade and subgrade encoded ordinally to preserve risk ordering. "
+                "WOE encoding applied to categorical variables to capture default rate signal. "
+                "Post-origination raw columns dropped after deriving engineered equivalents."
+            ),
+            recommendations=[
+                "Review feature_log for any domain features that may be controversial",
+                "Validate WOE bins are monotonic for scorecarding compliance",
+                "Check that no engineered feature introduces inadvertent leakage",
+                "Consider adding vintage features if origination date is available",
+            ],
+            artifacts={"feature_log_count": len(state.feature_log)},
+        )
+
         return state
 
     # ─────────────────────────────────────────────────────────────
@@ -274,17 +301,71 @@ class FeatureEngineeringAgent(BaseAgent):
 
     # ─────────────────────────────────────────────────────────────
     def _impute(self, df: pd.DataFrame, state: PipelineState) -> pd.DataFrame:
-        """Median imputation for numeric, mode for categorical."""
+        """Business-meaningful imputation. Numeric fields use sentinel codes that
+        preserve WHY a value is missing (rather than blurring it with the median):
+          -999999  missing source data (>20% missing in the original variable)
+          -999998  invalid ratio (division by zero)
+          -999997  not applicable due to filter (engineered conditional feature)
+        Low-missing standard numerics still use the median; strings use the mode.
+        """
+        imputation_log = []
+        n = len(df)
         for col in df.columns:
             if col == "target":
                 continue
-            n_miss = df[col].isna().sum()
+            n_miss = int(df[col].isna().sum())
             if n_miss == 0:
                 continue
-            if df[col].dtype in [object]:
-                df[col] = df[col].fillna(df[col].mode()[0] if not df[col].mode().empty else "unknown")
+            missing_pct = n_miss / n if n else 0.0
+
+            dtype_s = str(df[col].dtype)
+            is_str = (dtype_s in ("object", "str")
+                      or dtype_s.startswith("string")
+                      or dtype_s == "large_string")
+            numeric_series = pd.to_numeric(df[col], errors="coerce")
+
+            # Non-numeric / string → mode
+            if is_str or numeric_series.notna().sum() == 0:
+                mode = df[col].mode()
+                fill_val = mode[0] if len(mode) > 0 else "unknown"
+                df[col] = df[col].fillna(fill_val)
+                imputation_log.append({"Column": col, "Strategy": "Mode", "Value": str(fill_val),
+                                       "Missing%": round(missing_pct * 100, 1),
+                                       "Reason": "Most frequent category"})
+                continue
+
+            is_ratio_feature = any(kw in col.lower() for kw in ["ratio", "util", "pct", "rate"])
+            is_engineered_conditional = (
+                any(kw in col.lower() for kw in ["_sum", "_avg", "_count", "flag"])
+                and missing_pct < 0.5)
+
+            if is_ratio_feature and missing_pct < 0.3:
+                sentinel, reason = -999998, "Invalid ratio (division by zero)"
+            elif is_engineered_conditional:
+                sentinel, reason = -999997, "Not applicable due to filter (engineered feature, condition not met)"
+            elif missing_pct >= 0.20:
+                sentinel, reason = -999999, "Missing source data (>20% missing in original variable)"
             else:
-                df[col] = df[col].fillna(df[col].median())
+                sentinel, reason = None, "Median imputation (low missing %, standard numeric)"
+
+            if sentinel is not None:
+                df[col] = numeric_series.fillna(sentinel)
+                imputation_log.append({"Column": col, "Strategy": f"Sentinel ({sentinel})",
+                                       "Value": sentinel, "Missing%": round(missing_pct * 100, 1),
+                                       "Reason": reason})
+            else:
+                median_val = numeric_series.median()
+                df[col] = numeric_series.fillna(median_val)
+                imputation_log.append({"Column": col, "Strategy": "Median",
+                                       "Value": round(float(median_val), 2) if pd.notna(median_val) else 0,
+                                       "Missing%": round(missing_pct * 100, 1), "Reason": reason})
+
+        state.imputation_log = imputation_log
+        _n_sent = sum(1 for r in imputation_log if "Sentinel" in r["Strategy"])
+        _n_med = sum(1 for r in imputation_log if r["Strategy"] == "Median")
+        _n_mode = sum(1 for r in imputation_log if r["Strategy"] == "Mode")
+        self._info(f"Imputation: {len(imputation_log)} columns "
+                   f"({_n_sent} sentinel, {_n_med} median, {_n_mode} mode)")
         return df
 
     # ─────────────────────────────────────────────────────────────

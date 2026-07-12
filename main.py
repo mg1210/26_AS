@@ -37,6 +37,10 @@ def parse_args():
                         help="Number of Optuna hyperparameter trials")
     parser.add_argument("--quiet", action="store_true",
                         help="Suppress verbose agent logs")
+    parser.add_argument("--target-col", default="",
+                        help="Override target column name (skips auto-detection)")
+    parser.add_argument("--hyperparam-override", action="store_true",
+                        help="Apply an active hyperparameter_override from outputs/checkpoints.json")
     return parser.parse_args()
 
 
@@ -52,11 +56,13 @@ def main():
         optuna_trials = args.trials,
         auto_approve  = args.auto,
         verbose       = not args.quiet,
+        hyperparam_override = args.hyperparam_override,
     )
 
     state = orchestrator.run(
         dataset_path = args.dataset,
         dataset_name = args.name or os.path.basename(args.dataset),
+        target_col   = args.target_col,
     )
 
     return 0 if state.validation_passed else 1
