@@ -21,7 +21,8 @@ import plotly.express as px
 for _d in ("data", "outputs", "outputs/models", "outputs/charts"):
     os.makedirs(_d, exist_ok=True)
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, PROJECT_ROOT)
 
 from core.data_loader import smart_read_csv  # header-aware loader shared with the pipeline
 
@@ -607,12 +608,13 @@ if page == "Home":
             st.caption("Pipeline log")
             log_area = st.empty()
             progress = st.progress(0, text="Starting pipeline…")
-            cmd = [sys.executable, "main.py", "--auto",
+            cmd = [sys.executable, os.path.join(PROJECT_ROOT, "main.py"), "--auto",
                    "--trials", str(int(trials)),
                    "--dataset", st.session_state.dataset1_path]
             proc = subprocess.Popen(
                 cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 text=True, encoding="utf-8", errors="replace",
+                cwd=PROJECT_ROOT,   # run from project root so relative paths resolve (Streamlit Cloud)
                 env=dict(os.environ, PYTHONUTF8="1", PYTHONIOENCODING="utf-8"),
             )
             log_lines = []
@@ -640,7 +642,9 @@ if page == "Home":
                 st.success(f"Pipeline complete in {_run_elapsed:.1f}s — results loaded.")
                 st.rerun()
             else:
-                st.error("Pipeline finished but no results found. Check log above.")
+                st.error(f"Pipeline failed (exit code {proc.returncode}) — no results produced. "
+                         f"Full log (stdout + stderr):")
+                st.code("\n".join(log_lines[-300:]) or "(no output captured)")
 
         # ── Section 2 — New Data scoring ───────────────────────────────
         st.markdown("---")
@@ -675,8 +679,10 @@ if page == "Home":
         if score_btn and st.session_state.get("new_data_path"):
             with st.spinner("Scoring new data..."):
                 result = subprocess.run(
-                    [sys.executable, "evaluate_oot.py", "--dataset", st.session_state.new_data_path],
+                    [sys.executable, os.path.join(PROJECT_ROOT, "evaluate_oot.py"),
+                     "--dataset", st.session_state.new_data_path],
                     capture_output=True, text=True, encoding='utf-8', errors='replace',
+                    cwd=PROJECT_ROOT,
                     env=dict(os.environ, PYTHONUTF8="1", PYTHONIOENCODING="utf-8"),
                 )
             if result.returncode == 0:
@@ -692,8 +698,9 @@ if page == "Home":
                     st.session_state.has_run = True
                     st.rerun()
             else:
-                st.error("Scoring failed — check log below")
-                st.code(result.stderr[-1000:])
+                st.error(f"Scoring failed (exit code {result.returncode})")
+                st.code((result.stdout or "")[-3000:])
+                st.code((result.stderr or "")[-3000:])
 
     with col_results:
         st.subheader("Latest Results")
@@ -1215,13 +1222,15 @@ elif page == "📊 Data Understanding":
                         log_area = st.empty()
                         progress = st.progress(0, text="Starting pipeline with overridden target…")
                         cmd = [
-                            sys.executable, "main.py", "--auto",
+                            sys.executable, os.path.join(PROJECT_ROOT, "main.py"), "--auto",
                             "--dataset", dataset_path_rerun,
                             "--target-col", tov["target_col"],
                         ]
                         proc = subprocess.Popen(
                             cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                             text=True, encoding="utf-8", errors="replace",
+                            cwd=PROJECT_ROOT,
+                            env=dict(os.environ, PYTHONUTF8="1", PYTHONIOENCODING="utf-8"),
                         )
                         lines: list = []
                         phase_keywords = [
@@ -1254,7 +1263,9 @@ elif page == "📊 Data Understanding":
                             st.success(f"Pipeline re-run complete in {_run_elapsed:.1f}s — results updated.")
                             st.rerun()
                         else:
-                            st.error("Pipeline finished but no results found. Check log above.")
+                            st.error(f"Pipeline failed (exit code {proc.returncode}) — no results. "
+                                     f"Full log (stdout + stderr):")
+                            st.code("\n".join(lines[-300:]) or "(no output captured)")
                 else:
                     st.error(
                         f"Dataset file `{dataset_path_rerun}` not found. "
