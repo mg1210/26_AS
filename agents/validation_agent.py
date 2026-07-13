@@ -588,48 +588,52 @@ class ValidationAgent(BaseAgent):
         return state
 
     def _confusion_matrix_analysis(self, state: PipelineState) -> PipelineState:
-        """Confusion matrix + classification report at a 0.5 reporting threshold."""
+        """Confusion matrix + classification report at a 0.5 reporting threshold,
+        computed 3-way (Train / Test / OOT) to mirror the discrimination metrics."""
         model = state.champion_model
         if model is None:
             return state
-        X_test, y_test = state.X_test, state.y_test
 
-        y_prob = model.predict_proba(X_test)[:, 1]
-        y_pred_default = (y_prob >= 0.5).astype(int)
+        def compute_cm(X, y, label):
+            if X is None or y is None:
+                return None
+            y_prob = model.predict_proba(X)[:, 1]
+            y_pred = (y_prob >= 0.5).astype(int)
+            cm = confusion_matrix(y, y_pred)
+            tn, fp, fn, tp = cm.ravel()
+            precision = tp / (tp + fp) if (tp + fp) > 0 else 0
+            recall = tp / (tp + fn) if (tp + fn) > 0 else 0
+            f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
+            accuracy = (tp + tn) / (tp + tn + fp + fn)
+            specificity = tn / (tn + fp) if (tn + fp) > 0 else 0
+            report = classification_report(y, y_pred, output_dict=True,
+                                           target_names=['Good (0)', 'Bad (1)'], zero_division=0)
+            return {
+                'sample': label, 'threshold': 0.5, 'n': int(len(y)),
+                'true_positive': int(tp), 'false_positive': int(fp),
+                'true_negative': int(tn), 'false_negative': int(fn),
+                'accuracy': round(accuracy, 4), 'precision': round(precision, 4),
+                'recall': round(recall, 4), 'specificity': round(specificity, 4),
+                'f1_score': round(f1, 4), 'classification_report': report,
+                'note': '0.5 threshold used for reporting only — NOT the business decision threshold.',
+            }
 
-        cm = confusion_matrix(y_test, y_pred_default)
-        tn, fp, fn, tp = cm.ravel()
+        cm_train = compute_cm(state.X_train, state.y_train, 'Train')
+        cm_test  = compute_cm(state.X_test, state.y_test, 'Test')
+        cm_oot   = compute_cm(state.X_oot, state.y_oot, 'OOT') if state.X_oot is not None else None
 
-        precision = tp / (tp + fp) if (tp + fp) > 0 else 0
-        recall = tp / (tp + fn) if (tp + fn) > 0 else 0
-        f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
-        accuracy = (tp + tn) / (tp + tn + fp + fn)
-        specificity = tn / (tn + fp) if (tn + fp) > 0 else 0
+        # Keep the legacy flat keys pointing at Test (backward compatibility).
+        state.validation_metrics['confusion_matrix'] = cm_test
+        state.validation_metrics['confusion_matrix_train'] = cm_train
+        state.validation_metrics['confusion_matrix_test'] = cm_test
+        state.validation_metrics['confusion_matrix_oot'] = cm_oot
+        if cm_test:
+            state.validation_metrics['classification_report'] = cm_test['classification_report']
 
-        state.validation_metrics['confusion_matrix'] = {
-            'threshold': 0.5,
-            'true_positive': int(tp),
-            'false_positive': int(fp),
-            'true_negative': int(tn),
-            'false_negative': int(fn),
-            'accuracy': round(accuracy, 4),
-            'precision': round(precision, 4),
-            'recall': round(recall, 4),
-            'specificity': round(specificity, 4),
-            'f1_score': round(f1, 4),
-            'note': '0.5 threshold used for reporting only — NOT necessarily the correct '
-                    'business decision threshold. Optimal threshold should be set based on '
-                    'false-negative/false-positive cost ratio.',
-        }
-
-        report = classification_report(
-            y_test, y_pred_default, output_dict=True,
-            target_names=['Good (0)', 'Bad (1)'], zero_division=0)
-        state.validation_metrics['classification_report'] = report
-
-        self._info("Confusion Matrix @ 0.5 threshold:")
-        self._info(f"  TP={tp} FP={fp} TN={tn} FN={fn}")
-        self._info(f"  Precision={precision:.3f} Recall={recall:.3f} F1={f1:.3f} Accuracy={accuracy:.3f}")
+        for cm, label in [(cm_train, 'Train'), (cm_test, 'Test'), (cm_oot, 'OOT')]:
+            if cm:
+                self._info(f"Confusion Matrix — {label}: N={cm['n']} "
+                           f"Precision={cm['precision']:.3f} Recall={cm['recall']:.3f} F1={cm['f1_score']:.3f}")
         return state
 
     def _compute_ece(self, y_true, y_prob, n_bins=10):

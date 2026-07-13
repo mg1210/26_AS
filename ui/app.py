@@ -16,6 +16,11 @@ from datetime import datetime
 import plotly.graph_objects as go
 import plotly.express as px
 
+# Cloud-deployment safety: data/ and outputs/ are gitignored, so they may not
+# exist on a fresh deploy. Create them up-front so nothing crashes on missing dirs.
+for _d in ("data", "outputs", "outputs/models", "outputs/charts"):
+    os.makedirs(_d, exist_ok=True)
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.data_loader import smart_read_csv  # header-aware loader shared with the pipeline
@@ -150,24 +155,31 @@ def _severity_cell_style(val):
 
 
 def load_latest_results():
-    files = sorted(glob.glob("outputs/*_audit_trail.json"), reverse=True)
-    if not files:
+    # Cloud-safe: a missing/empty outputs/ or a corrupt audit file must never crash the page.
+    try:
+        files = sorted(glob.glob("outputs/*_audit_trail.json"), reverse=True)
+        if not files:
+            return None, ""
+        with open(files[0], encoding="utf-8") as f:
+            audit = json.load(f)
+        report_path = files[0].replace("_audit_trail.json", "_model_report.txt")
+        report_text = ""
+        if os.path.exists(report_path):
+            with open(report_path, encoding="utf-8") as f:
+                report_text = f.read()
+        return audit, report_text
+    except Exception:
         return None, ""
-    with open(files[0], encoding="utf-8") as f:
-        audit = json.load(f)
-    report_path = files[0].replace("_audit_trail.json", "_model_report.txt")
-    report_text = ""
-    if os.path.exists(report_path):
-        with open(report_path, encoding="utf-8") as f:
-            report_text = f.read()
-    return audit, report_text
 
 
 def load_checkpoints():
     path = "outputs/checkpoints.json"
-    if os.path.exists(path):
-        with open(path, encoding="utf-8") as f:
-            return json.load(f)
+    try:
+        if os.path.exists(path):
+            with open(path, encoding="utf-8") as f:
+                return json.load(f)
+    except Exception:
+        pass
     return {}
 
 

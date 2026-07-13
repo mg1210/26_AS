@@ -450,6 +450,32 @@ class DocumentationAgent(BaseAgent):
                 rc = cal.get("reliability_calibrated", [])
                 (pd.DataFrame(rc) if rc else pd.DataFrame({"note": ["no calibration"]})).to_excel(
                     xl, sheet_name="Calibration_Reliability", index=False)
+                # Confusion matrix — 3-way (Train/Test/OOT) + Test classification report
+                _cms = {"Train": state.validation_metrics.get("confusion_matrix_train"),
+                        "Test":  state.validation_metrics.get("confusion_matrix_test")
+                                 or state.validation_metrics.get("confusion_matrix"),
+                        "OOT":   state.validation_metrics.get("confusion_matrix_oot")}
+                _cms = {k: v for k, v in _cms.items() if v}
+                if _cms:
+                    _keys = [("N (sample size)", "n"), ("True Positive", "true_positive"),
+                             ("False Positive", "false_positive"), ("True Negative", "true_negative"),
+                             ("False Negative", "false_negative"), ("Accuracy", "accuracy"),
+                             ("Precision (BAD)", "precision"), ("Recall (BAD)", "recall"),
+                             ("Specificity (GOOD)", "specificity"), ("F1 (BAD)", "f1_score")]
+                    _cm_df = pd.DataFrame(
+                        [{"Metric": lbl, **{s: cm.get(key) for s, cm in _cms.items()}} for lbl, key in _keys])
+                    _cm_df.to_excel(xl, sheet_name="Confusion_Matrix", index=False, startrow=0)
+                    _cr = (_cms.get("Test") or {}).get("classification_report", {})
+                    _cr_rows = [{"Class (Test)": c, "Precision": _cr[c].get("precision"),
+                                 "Recall": _cr[c].get("recall"), "F1": _cr[c].get("f1-score"),
+                                 "Support": _cr[c].get("support")}
+                                for c in ("Good (0)", "Bad (1)") if isinstance(_cr.get(c), dict)]
+                    if _cr_rows:
+                        pd.DataFrame(_cr_rows).to_excel(
+                            xl, sheet_name="Confusion_Matrix", index=False, startrow=len(_cm_df) + 3)
+                else:
+                    pd.DataFrame({"note": ["no confusion matrix"]}).to_excel(
+                        xl, sheet_name="Confusion_Matrix", index=False)
             paths["models"] = p
         except Exception as e:
             state.log_warning(self.name, f"Model excel failed: {e}")
@@ -867,6 +893,7 @@ class DocumentationAgent(BaseAgent):
         table(["Model", "AUC", "KS", "Gini", "Champion"],
               [[c.get("model"), c.get("auc_test"), c.get("ks"), c.get("gini"), c.get("champion")]
                for c in ch] or [["see 11.1"]*5])
+        self._build_confusion_matrix_section(state, doc)
 
         # ═══ 13. Calibration ═══
         h1("13. Calibration")
@@ -1171,6 +1198,88 @@ class DocumentationAgent(BaseAgent):
             "single dominant signal — supporting robustness against changes in any one input distribution.")
 
         return "\n".join(lines)
+
+    def _build_confusion_matrix_section(self, state, document):
+        """§12.7 — combined Train/Test/OOT confusion matrix + Test classification report."""
+        cm_train = state.validation_metrics.get('confusion_matrix_train')
+        cm_test  = state.validation_metrics.get('confusion_matrix_test') or \
+                   state.validation_metrics.get('confusion_matrix')
+        cm_oot   = state.validation_metrics.get('confusion_matrix_oot')
+        if not cm_test:
+            return
+        thr = cm_test.get('threshold', 0.5)
+
+        document.add_heading('12.7 Confusion Matrix & Classification Report', level=2)
+        document.add_paragraph(
+            "Computed at a 0.5 probability threshold for reporting purposes only — this is NOT "
+            "necessarily the correct business decision threshold. The optimal cutoff should be set "
+            "based on the actual cost ratio between false negatives and false positives once agreed "
+            "with the business. Shown across Train, Test and OOT to check for consistency of "
+            "classification performance alongside the ranking metrics reported in Section 12.1.")
+
+        samples = [(l, c) for l, c in
+                   [('Train', cm_train), ('Test', cm_test), ('OOT', cm_oot)] if c is not None]
+
+        t = document.add_table(rows=1, cols=len(samples) + 1)
+        t.style = 'Table Grid'
+        t.rows[0].cells[0].text = 'Metric'
+        for i, (label, _) in enumerate(samples, 1):
+            t.rows[0].cells[i].text = label
+        for metric_label, key, fmt in [
+            ('N (sample size)', 'n', '{:,}'),
+            ('True Positive', 'true_positive', '{:,}'),
+            ('False Positive', 'false_positive', '{:,}'),
+            ('True Negative', 'true_negative', '{:,}'),
+            ('False Negative', 'false_negative', '{:,}'),
+            ('Accuracy', 'accuracy', '{:.4f}'),
+            ('Precision (BAD class)', 'precision', '{:.4f}'),
+            ('Recall (BAD class)', 'recall', '{:.4f}'),
+            ('Specificity (GOOD class)', 'specificity', '{:.4f}'),
+            ('F1 Score (BAD class)', 'f1_score', '{:.4f}'),
+        ]:
+            r = t.add_row().cells
+            r[0].text = metric_label
+            for i, (_, cm) in enumerate(samples, 1):
+                r[i].text = fmt.format(cm.get(key, 0))
+        document.add_paragraph()
+
+        gap_note = ""
+        if cm_oot:
+            recall_gap = abs(cm_test['recall'] - cm_oot['recall'])
+            precision_gap = abs(cm_test['precision'] - cm_oot['precision'])
+            gap_note = (f" Recall gap Test→OOT: {recall_gap:.4f}; Precision gap: {precision_gap:.4f} — "
+                        f"{'consistent' if max(recall_gap, precision_gap) < 0.05 else 'some drift observed'} "
+                        f"classification performance across time periods.")
+        document.add_paragraph(
+            f"Interpretation: at the {thr} threshold, the model correctly identifies "
+            f"{cm_test['recall'] * 100:.1f}% of actual defaulters on the Test set (recall), and when it "
+            f"predicts default it is correct {cm_test['precision'] * 100:.1f}% of the time (precision)."
+            f"{gap_note} Precision and recall both shift as the threshold moves and should be tuned "
+            f"jointly with business cost assumptions rather than left at the default 0.5 cutoff.")
+
+        report = cm_test.get('classification_report', {})
+        if report:
+            document.add_paragraph()
+            document.add_paragraph('Full Classification Report — Test set (per class):').runs[0].bold = True
+            ct = document.add_table(rows=1, cols=5)
+            ct.style = 'Table Grid'
+            for i, h in enumerate(['Class', 'Precision', 'Recall', 'F1-Score', 'Support']):
+                ct.rows[0].cells[i].text = h
+            for cls in ['Good (0)', 'Bad (1)']:
+                if cls in report:
+                    s = report[cls]
+                    r = ct.add_row().cells
+                    r[0].text = cls
+                    r[1].text = f"{s.get('precision', 0):.4f}"
+                    r[2].text = f"{s.get('recall', 0):.4f}"
+                    r[3].text = f"{s.get('f1-score', 0):.4f}"
+                    r[4].text = f"{int(s.get('support', 0)):,}"
+
+        cap = document.add_paragraph()
+        cr_run = cap.add_run("Reference: Model_Comparison.xlsx → Confusion_Matrix")
+        cr_run.italic = True
+        cr_run.font.size = Pt(8)
+        cr_run.font.color.rgb = RGBColor(0x66, 0x66, 0x66)
 
     # ───────────────────────── plain text ──────────────────────────
     def _generate_txt(self, state: PipelineState) -> PipelineState:
