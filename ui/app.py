@@ -591,9 +591,21 @@ if page == "Home":
 
     with col_run:
         if IS_CLOUD:
-            st.info('This cloud demo displays the full documented pipeline run '
-                    '(104,164 rows, XGBoost champion, AUC=0.7071). Live execution is '
-                    'available by running locally — see README.')
+            # Describe the committed sample run dynamically so the banner always matches
+            # the actual numbers in sample_results/ (row count, champion, Test AUC).
+            _champ = data.get("champion_model_name")
+            _auc = (data.get("model_metrics", {}).get(_champ, {}) or {}).get("auc_test")
+            _rows = (data.get("split_details", {}) or {}).get("total")
+            _bits = []
+            if _rows:
+                _bits.append(f"{int(_rows):,} rows")
+            if _champ:
+                _bits.append(f"{_champ} champion")
+            if _auc is not None:
+                _bits.append(f"Test AUC={_auc:.4f}")
+            _detail = f" ({', '.join(_bits)})" if _bits else ""
+            st.info(f"This cloud demo displays the full documented pipeline run{_detail}. "
+                    "Live execution is available by running locally — see README.")
         api_key = st.text_input("Anthropic API key", type="password",
                                 value=os.environ.get("ANTHROPIC_API_KEY", ""),
                                 placeholder="sk-ant-...")
