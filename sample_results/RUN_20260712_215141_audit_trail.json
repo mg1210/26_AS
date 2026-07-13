@@ -1,0 +1,6078 @@
+{
+  "run_id": "RUN_20260712_215141",
+  "dataset_name": "Loan_Data_Development.csv",
+  "headerless": false,
+  "target_column": "loan_status",
+  "target_definition": "Binary default flag derived from 'loan_status'. BAD (1): Charged Off, Does not meet the credit policy. Status:Charged Off, Default. GOOD (0): Fully Paid, Does not meet the credit policy. Status:Fully Paid. Default rate: 19.61%. Excluded indeterminate: 88,426 rows (45.9%). Final sample: 104,164 observations.",
+  "data_dictionary": {
+    "acc_now_delinq": "The number of accounts on which the borrower is now delinquent.",
+    "acc_open_past_24mths": "Number of trades opened in past 24 months.",
+    "addr_state": "The state provided by the borrower in the loan application",
+    "all_util": "Balance to credit limit on all trades",
+    "annual_inc": "The self-reported annual income provided by the borrower during registration.",
+    "annual_inc_joint": "The combined self-reported annual income provided by the co-borrowers during registration",
+    "application_type": "Indicates whether the loan is an individual application or a joint application with two co-borrowers",
+    "avg_cur_bal": "Average current balance of all accounts",
+    "bc_open_to_buy": "Total open to buy on revolving bankcards.",
+    "bc_util": "Ratio of total current balance to high credit/credit limit for all bankcard accounts.",
+    "chargeoff_within_12_mths": "Number of charge-offs within 12 months",
+    "collection_recovery_fee": "post charge off collection fee",
+    "collections_12_mths_ex_med": "Number of collections in 12 months excluding medical collections",
+    "delinq_2yrs": "The number of 30+ days past-due incidences of delinquency in the borrower's credit file for the past 2 years",
+    "delinq_amnt": "The past-due amount owed for the accounts on which the borrower is now delinquent.",
+    "desc": "Loan description provided by the borrower",
+    "dti": "A ratio calculated using the borrower\u2019s total monthly debt payments on the total debt obligations, excluding mortgage and the requested LC loan, divided by the borrower\u2019s self-reported monthly income.",
+    "dti_joint": "A ratio calculated using the co-borrowers' total monthly payments on the total debt obligations, excluding mortgages and the requested LC loan, divided by the co-borrowers' combined self-reported monthly income",
+    "earliest_cr_line": "The month the borrower's earliest reported credit line was opened",
+    "emp_length": "Employment length in years. Possible values are between 0 and 10 where 0 means less than one year and 10 means ten or more years.",
+    "emp_title": "The job title supplied by the Borrower when applying for the loan.*",
+    "fico_range_high": "The upper boundary range the borrower\u2019s FICO at loan origination belongs to.",
+    "fico_range_low": "The lower boundary range the borrower\u2019s FICO at loan origination belongs to.",
+    "funded_amnt": "The total amount committed to that loan at that point in time.",
+    "funded_amnt_inv": "The total amount committed by investors for that loan at that point in time.",
+    "grade": "LC assigned loan grade",
+    "home_ownership": "The home ownership status provided by the borrower during registration\u00a0or obtained from the credit report.\u00a0Our values are: RENT, OWN, MORTGAGE, OTHER",
+    "id": "A unique LC assigned ID for the loan listing.",
+    "il_util": "Ratio of total current balance to high credit/credit limit on all install acct",
+    "initial_list_status": "The initial listing status of the loan. Possible values are \u2013 W, F",
+    "inq_fi": "Number of personal finance inquiries",
+    "inq_last_12m": "Number of credit inquiries in past 12 months",
+    "inq_last_6mths": "The number of inquiries in past 6 months (excluding auto and mortgage inquiries)",
+    "installment": "The monthly payment owed by the borrower if the loan originates.",
+    "int_rate": "Interest Rate on the loan",
+    "issue_d": "The month which the loan was funded",
+    "last_credit_pull_d": "The most recent month LC pulled credit for this loan",
+    "last_fico_range_high": "The upper boundary range the borrower\u2019s last FICO pulled belongs to.",
+    "last_fico_range_low": "The lower boundary range the borrower\u2019s last FICO pulled belongs to.",
+    "last_pymnt_amnt": "Last total payment amount received",
+    "last_pymnt_d": "Last month payment was received",
+    "loan_amnt": "The listed amount of the loan applied for by the borrower. If at some point in time, the credit department reduces the loan amount, then it will be reflected in this value.",
+    "loan_status": "Current status of the loan",
+    "max_bal_bc": "Maximum current balance owed on all revolving accounts",
+    "member_id": "A unique LC assigned Id for the borrower member.",
+    "mo_sin_old_il_acct": "Months since oldest bank installment account opened",
+    "mo_sin_old_rev_tl_op": "Months since oldest revolving account opened",
+    "mo_sin_rcnt_rev_tl_op": "Months since most recent revolving account opened",
+    "mo_sin_rcnt_tl": "Months since most recent account opened",
+    "mort_acc": "Number of mortgage accounts.",
+    "mths_since_last_delinq": "The number of months since the borrower's last delinquency.",
+    "mths_since_last_major_derog": "Months since most recent 90-day or worse rating",
+    "mths_since_last_record": "The number of months since the last public record.",
+    "mths_since_rcnt_il": "Months since most recent installment accounts opened",
+    "mths_since_recent_bc": "Months since most recent bankcard account opened.",
+    "mths_since_recent_bc_dlq": "Months since most recent bankcard delinquency",
+    "mths_since_recent_inq": "Months since most recent inquiry.",
+    "mths_since_recent_revol_delinq": "Months since most recent revolving delinquency.",
+    "next_pymnt_d": "Next scheduled payment date",
+    "num_accts_ever_120_pd": "Number of accounts ever 120 or more days past due",
+    "num_actv_bc_tl": "Number of currently active bankcard accounts",
+    "num_actv_rev_tl": "Number of currently active revolving trades",
+    "num_bc_sats": "Number of satisfactory bankcard accounts",
+    "num_bc_tl": "Number of bankcard accounts",
+    "num_il_tl": "Number of installment accounts",
+    "num_op_rev_tl": "Number of open revolving accounts",
+    "num_rev_accts": "Number of revolving accounts",
+    "num_rev_tl_bal_gt_0": "Number of revolving trades with balance >0",
+    "num_sats": "Number of satisfactory accounts",
+    "num_tl_120dpd_2m": "Number of accounts currently 120 days past due (updated in past 2 months)",
+    "num_tl_30dpd": "Number of accounts currently 30 days past due (updated in past 2 months)",
+    "num_tl_90g_dpd_24m": "Number of accounts 90 or more days past due in last 24 months",
+    "num_tl_op_past_12m": "Number of accounts opened in past 12 months",
+    "open_acc": "The number of open credit lines in the borrower's credit file.",
+    "open_acc_6m": "Number of open trades in last 6 months",
+    "open_il_12m": "Number of installment accounts opened in past 12 months",
+    "open_il_24m": "Number of installment accounts opened in past 24 months",
+    "open_act_il": "Number of currently active installment trades",
+    "open_rv_12m": "Number of revolving trades opened in past 12 months",
+    "open_rv_24m": "Number of revolving trades opened in past 24 months",
+    "out_prncp": "Remaining outstanding principal for total amount funded",
+    "out_prncp_inv": "Remaining outstanding principal for portion of total amount funded by investors",
+    "pct_tl_nvr_dlq": "Percent of trades never delinquent",
+    "percent_bc_gt_75": "Percentage of all bankcard accounts > 75% of limit.",
+    "policy_code": "publicly available policy_code=1\nnew products not publicly available policy_code=2",
+    "pub_rec": "Number of derogatory public records",
+    "pub_rec_bankruptcies": "Number of public record bankruptcies",
+    "purpose": "A category provided by the borrower for the loan request.",
+    "pymnt_plan": "Indicates if a payment plan has been put in place for the loan",
+    "recoveries": "post charge off gross recovery",
+    "revol_bal": "Total credit revolving balance",
+    "revol_util": "Revolving line utilization rate, or the amount of credit the borrower is using relative to all available revolving credit.",
+    "sub_grade": "LC assigned loan subgrade",
+    "tax_liens": "Number of tax liens",
+    "term": "The number of payments on the loan. Values are in months and can be either 36 or 60.",
+    "title": "The loan title provided by the borrower",
+    "tot_coll_amt": "Total collection amounts ever owed",
+    "tot_cur_bal": "Total current balance of all accounts",
+    "tot_hi_cred_lim": "Total high credit/credit limit",
+    "total_acc": "The total number of credit lines currently in the borrower's credit file",
+    "total_bal_ex_mort": "Total credit balance excluding mortgage",
+    "total_bal_il": "Total current balance of all installment accounts",
+    "total_bc_limit": "Total bankcard high credit/credit limit",
+    "total_cu_tl": "Number of finance trades",
+    "total_il_high_credit_limit": "Total installment high credit/credit limit",
+    "total_pymnt": "Payments received to date for total amount funded",
+    "total_pymnt_inv": "Payments received to date for portion of total amount funded by investors",
+    "total_rec_int": "Interest received to date",
+    "total_rec_late_fee": "Late fees received to date",
+    "total_rec_prncp": "Principal received to date",
+    "total_rev_hi_lim": "Total revolving high credit/credit limit",
+    "url": "URL for the LC page with listing data.",
+    "verification_status": "Indicates if income was verified by LC, not verified, or if the income source was verified",
+    "verified_status_joint": "Indicates if the co-borrowers' joint income was verified by LC, not verified, or if the income source was verified",
+    "zip_code": "The first 3 numbers of the zip code provided by the borrower in the loan application.",
+    "revol_bal_joint": "Sum of revolving credit balance of the co-borrowers, net of duplicate balances",
+    "sec_app_fico_range_low": "FICO range (high) for the secondary applicant",
+    "sec_app_fico_range_high": "FICO range (low) for the secondary applicant",
+    "sec_app_earliest_cr_line": "Earliest credit line at time of application for the secondary applicant",
+    "sec_app_inq_last_6mths": "Credit inquiries in the last 6 months at time of application for the secondary applicant",
+    "sec_app_mort_acc": "Number of mortgage accounts at time of application for the secondary applicant",
+    "sec_app_open_acc": "Number of open trades at time of application for the secondary applicant",
+    "sec_app_revol_util": "Ratio of total current balance to high credit/credit limit for all revolving accounts",
+    "sec_app_open_act_il": "Number of currently active installment trades at time of application for the secondary applicant",
+    "sec_app_num_rev_accts": "Number of revolving accounts at time of application for the secondary applicant",
+    "sec_app_chargeoff_within_12_mths": "Number of charge-offs within last 12 months at time of application for the secondary applicant",
+    "sec_app_collections_12_mths_ex_med": "Number of collections within last 12 months excluding medical collections at time of application for the secondary applicant",
+    "sec_app_mths_since_last_major_derog": "Months since most recent 90-day or worse rating at time of application for the secondary applicant",
+    "hardship_flag": "Flags whether or not the borrower is on a hardship plan",
+    "hardship_type": "Describes the hardship plan offering",
+    "hardship_reason": "Describes the reason the hardship plan was offered",
+    "hardship_status": "Describes if the hardship plan is active, pending, canceled, completed, or broken",
+    "deferral_term": "Amount of months that the borrower is expected to pay less than the contractual monthly payment amount due to a hardship plan",
+    "hardship_amount": "The interest payment that the borrower has committed to make each month while they are on a hardship plan",
+    "hardship_start_date": "The start date of the hardship plan period",
+    "hardship_end_date": "The end date of the hardship plan period",
+    "payment_plan_start_date": "The day the first hardship plan payment is due. For example, if a borrower has a hardship plan period of 3 months, the start date is the start of the three-month period in which the borrower is allowed to make interest-only payments.",
+    "hardship_length": "The number of months the borrower will make smaller payments than normally obligated due to a hardship plan",
+    "hardship_dpd": "Account days past due as of the hardship plan start date",
+    "hardship_loan_status": "Loan Status as of the hardship plan start date",
+    "orig_projected_additional_accrued_interest": "The original projected additional interest amount that will accrue for the given hardship payment plan as of the Hardship Start Date. This field will be null if the borrower has broken their hardship payment plan.",
+    "hardship_payoff_balance_amount": "The payoff balance amount as of the hardship plan start date",
+    "hardship_last_payment_amount": "The last payment amount as of the hardship plan start date",
+    "disbursement_method": "The method by which the borrower receives their loan. Possible values are: CASH, DIRECT_PAY",
+    "debt_settlement_flag": "Flags whether or not the borrower, who has charged-off, is working with a debt-settlement company.",
+    "debt_settlement_flag_date": "The most recent date that the Debt_Settlement_Flag has been set",
+    "settlement_status": "The status of the borrower\u2019s settlement plan. Possible values are: COMPLETE, ACTIVE, BROKEN, CANCELLED, DENIED, DRAFT",
+    "settlement_date": "The date that the borrower agrees to the settlement plan",
+    "settlement_amount": "The loan amount that the borrower has agreed to settle for",
+    "settlement_percentage": "The settlement amount as a percentage of the payoff balance amount on the loan",
+    "settlement_term": "The number of months that the borrower will be on the settlement plan"
+  },
+  "leakage_columns": [
+    "out_prncp",
+    "out_prncp_inv",
+    "total_pymnt",
+    "total_pymnt_inv",
+    "total_rec_prncp",
+    "total_rec_int",
+    "total_rec_late_fee",
+    "recoveries",
+    "collection_recovery_fee",
+    "last_pymnt_d",
+    "last_pymnt_amnt",
+    "next_pymnt_d",
+    "last_credit_pull_d"
+  ],
+  "id_columns": [
+    "Record_No",
+    "id",
+    "member_id",
+    "title",
+    "zip_code",
+    "emp_title",
+    "pymnt_plan",
+    "policy_code"
+  ],
+  "date_columns": [
+    "issue_d",
+    "earliest_cr_line",
+    "mths_since_last_delinq",
+    "mths_since_last_major_derog",
+    "acc_now_delinq"
+  ],
+  "categorical_columns": [
+    "term",
+    "grade",
+    "sub_grade",
+    "emp_length",
+    "home_ownership",
+    "verification_status",
+    "purpose",
+    "addr_state",
+    "initial_list_status",
+    "collections_12_mths_ex_med",
+    "annual_inc_joint",
+    "dti_joint",
+    "verification_status_joint",
+    "open_acc_6m",
+    "open_il_6m",
+    "open_il_12m",
+    "open_il_24m",
+    "mths_since_rcnt_il",
+    "total_bal_il",
+    "il_util",
+    "open_rv_12m",
+    "open_rv_24m",
+    "max_bal_bc",
+    "all_util",
+    "inq_fi",
+    "total_cu_tl",
+    "inq_last_12m"
+  ],
+  "numeric_columns": [
+    "loan_amnt",
+    "funded_amnt",
+    "funded_amnt_inv",
+    "int_rate",
+    "installment",
+    "annual_inc",
+    "dti",
+    "delinq_2yrs",
+    "inq_last_6mths",
+    "mths_since_last_record",
+    "open_acc",
+    "pub_rec",
+    "revol_bal",
+    "revol_util",
+    "total_acc",
+    "tot_coll_amt",
+    "tot_cur_bal",
+    "total_rev_hi_lim"
+  ],
+  "high_missing_cols": [
+    "mths_since_last_record",
+    "annual_inc_joint",
+    "dti_joint",
+    "verification_status_joint",
+    "open_acc_6m",
+    "open_il_6m",
+    "open_il_12m",
+    "open_il_24m",
+    "mths_since_rcnt_il",
+    "total_bal_il",
+    "il_util",
+    "open_rv_12m",
+    "open_rv_24m",
+    "max_bal_bc",
+    "all_util",
+    "inq_fi",
+    "total_cu_tl",
+    "inq_last_12m",
+    "mths_since_last_delinq",
+    "mths_since_last_major_derog"
+  ],
+  "schema_profile": {
+    "Record_No": {
+      "dtype": "int64",
+      "semantic_type": "identifier",
+      "missing_pct": 0.0,
+      "n_unique": 192590,
+      "sample_vals": [
+        "12272",
+        "12278",
+        "12290"
+      ],
+      "business_meaning": "Record No",
+      "role": "identifier"
+    },
+    "id": {
+      "dtype": "int64",
+      "semantic_type": "identifier",
+      "missing_pct": 0.0,
+      "n_unique": 192590,
+      "sample_vals": [
+        "801117",
+        "800987",
+        "800482"
+      ],
+      "business_meaning": "A unique LC assigned ID for the loan listing.",
+      "role": "identifier"
+    },
+    "member_id": {
+      "dtype": "int64",
+      "semantic_type": "identifier",
+      "missing_pct": 0.0,
+      "n_unique": 192590,
+      "sample_vals": [
+        "1006664",
+        "1006529",
+        "1005821"
+      ],
+      "business_meaning": "A unique LC assigned Id for the borrower member.",
+      "role": "identifier"
+    },
+    "loan_amnt": {
+      "dtype": "int64",
+      "semantic_type": "monetary",
+      "missing_pct": 0.0,
+      "n_unique": 1301,
+      "sample_vals": [
+        "1000",
+        "2000",
+        "2400"
+      ],
+      "business_meaning": "The listed amount of the loan applied for by the borrower. If at some point in time, the credit department reduces the loan amount, then it will be reflected in this value.",
+      "role": "numeric"
+    },
+    "funded_amnt": {
+      "dtype": "int64",
+      "semantic_type": "continuous",
+      "missing_pct": 0.0,
+      "n_unique": 1306,
+      "sample_vals": [
+        "1000",
+        "2000",
+        "2400"
+      ],
+      "business_meaning": "The total amount committed to that loan at that point in time.",
+      "role": "numeric"
+    },
+    "funded_amnt_inv": {
+      "dtype": "float64",
+      "semantic_type": "continuous",
+      "missing_pct": 0.0,
+      "n_unique": 5713,
+      "sample_vals": [
+        "1000.0",
+        "2000.0",
+        "2400.0"
+      ],
+      "business_meaning": "The total amount committed by investors for that loan at that point in time.",
+      "role": "numeric"
+    },
+    "term": {
+      "dtype": "int64",
+      "semantic_type": "binary_numeric",
+      "missing_pct": 0.0,
+      "n_unique": 2,
+      "sample_vals": [
+        "36",
+        "36",
+        "60"
+      ],
+      "business_meaning": "The number of payments on the loan. Values are in months and can be either 36 or 60.",
+      "role": "categorical"
+    },
+    "int_rate": {
+      "dtype": "float64",
+      "semantic_type": "ratio",
+      "missing_pct": 0.0,
+      "n_unique": 429,
+      "sample_vals": [
+        "10.99",
+        "11.99",
+        "17.99"
+      ],
+      "business_meaning": "Interest Rate on the loan",
+      "role": "numeric"
+    },
+    "installment": {
+      "dtype": "float64",
+      "semantic_type": "continuous",
+      "missing_pct": 0.0,
+      "n_unique": 36211,
+      "sample_vals": [
+        "32.74",
+        "66.42",
+        "60.94"
+      ],
+      "business_meaning": "The monthly payment owed by the borrower if the loan originates.",
+      "role": "numeric"
+    },
+    "grade": {
+      "dtype": "str",
+      "semantic_type": "low_cardinality_categorical",
+      "missing_pct": 0.0,
+      "n_unique": 7,
+      "sample_vals": [
+        "B",
+        "B",
+        "E"
+      ],
+      "business_meaning": "LC assigned loan grade",
+      "role": "categorical"
+    },
+    "sub_grade": {
+      "dtype": "str",
+      "semantic_type": "high_cardinality_categorical",
+      "missing_pct": 0.0,
+      "n_unique": 35,
+      "sample_vals": [
+        "B3",
+        "B5",
+        "E1"
+      ],
+      "business_meaning": "LC assigned loan subgrade",
+      "role": "categorical"
+    },
+    "emp_title": {
+      "dtype": "str",
+      "semantic_type": "high_cardinality_categorical",
+      "missing_pct": 0.0626,
+      "n_unique": 100882,
+      "sample_vals": [
+        "Department of the Army",
+        "Allosource",
+        "Hunter Laboratories"
+      ],
+      "business_meaning": "The job title supplied by the Borrower when applying for the loan.*",
+      "role": "identifier"
+    },
+    "emp_length": {
+      "dtype": "float64",
+      "semantic_type": "ordinal",
+      "missing_pct": 0.0444,
+      "n_unique": 11,
+      "sample_vals": [
+        "8.0",
+        "3.0",
+        "3.0"
+      ],
+      "business_meaning": "Employment length in years. Possible values are between 0 and 10 where 0 means less than one year and 10 means ten or more years.",
+      "role": "categorical"
+    },
+    "home_ownership": {
+      "dtype": "str",
+      "semantic_type": "low_cardinality_categorical",
+      "missing_pct": 0.0,
+      "n_unique": 5,
+      "sample_vals": [
+        "MORTGAGE",
+        "RENT",
+        "MORTGAGE"
+      ],
+      "business_meaning": "The home ownership status provided by the borrower during registration\u00a0or obtained from the credit report.\u00a0Our values are: RENT, OWN, MORTGAGE, OTHER",
+      "role": "categorical"
+    },
+    "annual_inc": {
+      "dtype": "float64",
+      "semantic_type": "continuous",
+      "missing_pct": 0.0,
+      "n_unique": 16680,
+      "sample_vals": [
+        "26400.0",
+        "49029.0",
+        "38532.0"
+      ],
+      "business_meaning": "The self-reported annual income provided by the borrower during registration.",
+      "role": "numeric"
+    },
+    "verification_status": {
+      "dtype": "str",
+      "semantic_type": "low_cardinality_categorical",
+      "missing_pct": 0.0,
+      "n_unique": 3,
+      "sample_vals": [
+        "Not Verified",
+        "Source Verified",
+        "Not Verified"
+      ],
+      "business_meaning": "Indicates if income was verified by LC, not verified, or if the income source was verified",
+      "role": "categorical"
+    },
+    "issue_d": {
+      "dtype": "str",
+      "semantic_type": "high_cardinality_categorical",
+      "missing_pct": 0.0,
+      "n_unique": 43,
+      "sample_vals": [
+        "11-Jun",
+        "11-Jun",
+        "11-Jun"
+      ],
+      "business_meaning": "The month which the loan was funded",
+      "role": "date"
+    },
+    "loan_status": {
+      "dtype": "str",
+      "semantic_type": "low_cardinality_categorical",
+      "missing_pct": 0.0,
+      "n_unique": 9,
+      "sample_vals": [
+        "Charged Off",
+        "Fully Paid",
+        "Fully Paid"
+      ],
+      "business_meaning": "Current status of the loan",
+      "role": "target"
+    },
+    "pymnt_plan": {
+      "dtype": "str",
+      "semantic_type": "binary_categorical",
+      "missing_pct": 0.0,
+      "n_unique": 2,
+      "sample_vals": [
+        "n",
+        "n",
+        "n"
+      ],
+      "business_meaning": "Indicates if a payment plan has been put in place for the loan",
+      "role": "identifier"
+    },
+    "purpose": {
+      "dtype": "str",
+      "semantic_type": "low_cardinality_categorical",
+      "missing_pct": 0.0,
+      "n_unique": 14,
+      "sample_vals": [
+        "small_business",
+        "wedding",
+        "other"
+      ],
+      "business_meaning": "A category provided by the borrower for the loan request.",
+      "role": "categorical"
+    },
+    "title": {
+      "dtype": "str",
+      "semantic_type": "high_cardinality_categorical",
+      "missing_pct": 0.0001,
+      "n_unique": 31005,
+      "sample_vals": [
+        "Internet Marketer",
+        "Wedding Loan",
+        "Wedding Expenses"
+      ],
+      "business_meaning": "The loan title provided by the borrower",
+      "role": "identifier"
+    },
+    "zip_code": {
+      "dtype": "str",
+      "semantic_type": "high_cardinality_categorical",
+      "missing_pct": 0.0,
+      "n_unique": 860,
+      "sample_vals": [
+        "019xx",
+        "660xx",
+        "802xx"
+      ],
+      "business_meaning": "The first 3 numbers of the zip code provided by the borrower in the loan application.",
+      "role": "identifier"
+    },
+    "addr_state": {
+      "dtype": "str",
+      "semantic_type": "high_cardinality_categorical",
+      "missing_pct": 0.0,
+      "n_unique": 50,
+      "sample_vals": [
+        "MA",
+        "KS",
+        "CO"
+      ],
+      "business_meaning": "The state provided by the borrower in the loan application",
+      "role": "categorical"
+    },
+    "dti": {
+      "dtype": "float64",
+      "semantic_type": "ratio",
+      "missing_pct": 0.0,
+      "n_unique": 3499,
+      "sample_vals": [
+        "12.95",
+        "9.67",
+        "14.11"
+      ],
+      "business_meaning": "A ratio calculated using the borrower\u2019s total monthly debt payments on the total debt obligations, excluding mortgage and the requested LC loan, divided by the borrower\u2019s self-reported monthly income.",
+      "role": "numeric"
+    },
+    "delinq_2yrs": {
+      "dtype": "float64",
+      "semantic_type": "continuous",
+      "missing_pct": 0.0001,
+      "n_unique": 22,
+      "sample_vals": [
+        "1.0",
+        "0.0",
+        "0.0"
+      ],
+      "business_meaning": "The number of 30+ days past-due incidences of delinquency in the borrower's credit file for the past 2 years",
+      "role": "numeric"
+    },
+    "earliest_cr_line": {
+      "dtype": "str",
+      "semantic_type": "high_cardinality_categorical",
+      "missing_pct": 0.0001,
+      "n_unique": 635,
+      "sample_vals": [
+        "Aug-96",
+        "Sep-97",
+        "Jul-00"
+      ],
+      "business_meaning": "The month the borrower's earliest reported credit line was opened",
+      "role": "date"
+    },
+    "inq_last_6mths": {
+      "dtype": "float64",
+      "semantic_type": "temporal_numeric",
+      "missing_pct": 0.0001,
+      "n_unique": 22,
+      "sample_vals": [
+        "0.0",
+        "0.0",
+        "1.0"
+      ],
+      "business_meaning": "The number of inquiries in past 6 months (excluding auto and mortgage inquiries)",
+      "role": "numeric"
+    },
+    "mths_since_last_delinq": {
+      "dtype": "float64",
+      "semantic_type": "temporal_numeric",
+      "missing_pct": 0.5516,
+      "n_unique": 129,
+      "sample_vals": [
+        "5.0",
+        "73.0",
+        "40.0"
+      ],
+      "business_meaning": "The number of months since the borrower's last delinquency.",
+      "role": "date"
+    },
+    "mths_since_last_record": {
+      "dtype": "float64",
+      "semantic_type": "temporal_numeric",
+      "missing_pct": 0.8585,
+      "n_unique": 123,
+      "sample_vals": [
+        "104.0",
+        "104.0",
+        "85.0"
+      ],
+      "business_meaning": "The number of months since the last public record.",
+      "role": "numeric"
+    },
+    "open_acc": {
+      "dtype": "float64",
+      "semantic_type": "continuous",
+      "missing_pct": 0.0001,
+      "n_unique": 55,
+      "sample_vals": [
+        "3.0",
+        "4.0",
+        "5.0"
+      ],
+      "business_meaning": "The number of open credit lines in the borrower's credit file.",
+      "role": "numeric"
+    },
+    "pub_rec": {
+      "dtype": "float64",
+      "semantic_type": "continuous",
+      "missing_pct": 0.0001,
+      "n_unique": 20,
+      "sample_vals": [
+        "0.0",
+        "0.0",
+        "0.0"
+      ],
+      "business_meaning": "Number of derogatory public records",
+      "role": "numeric"
+    },
+    "revol_bal": {
+      "dtype": "int64",
+      "semantic_type": "continuous",
+      "missing_pct": 0.0,
+      "n_unique": 44492,
+      "sample_vals": [
+        "0",
+        "795",
+        "2463"
+      ],
+      "business_meaning": "Total credit revolving balance",
+      "role": "numeric"
+    },
+    "revol_util": {
+      "dtype": "float64",
+      "semantic_type": "continuous",
+      "missing_pct": 0.0008,
+      "n_unique": 1141,
+      "sample_vals": [
+        "0.0",
+        "79.5",
+        "72.4"
+      ],
+      "business_meaning": "Revolving line utilization rate, or the amount of credit the borrower is using relative to all available revolving credit.",
+      "role": "numeric"
+    },
+    "total_acc": {
+      "dtype": "float64",
+      "semantic_type": "continuous",
+      "missing_pct": 0.0001,
+      "n_unique": 86,
+      "sample_vals": [
+        "9.0",
+        "20.0",
+        "9.0"
+      ],
+      "business_meaning": "The total number of credit lines currently in the borrower's credit file",
+      "role": "numeric"
+    },
+    "initial_list_status": {
+      "dtype": "str",
+      "semantic_type": "binary_categorical",
+      "missing_pct": 0.0,
+      "n_unique": 2,
+      "sample_vals": [
+        "f",
+        "f",
+        "f"
+      ],
+      "business_meaning": "The initial listing status of the loan. Possible values are \u2013 W, F",
+      "role": "categorical"
+    },
+    "out_prncp": {
+      "dtype": "float64",
+      "semantic_type": "continuous",
+      "missing_pct": 0.0,
+      "n_unique": 55069,
+      "sample_vals": [
+        "0.0",
+        "0.0",
+        "0.0"
+      ],
+      "business_meaning": "Remaining outstanding principal for total amount funded",
+      "role": "leakage"
+    },
+    "out_prncp_inv": {
+      "dtype": "float64",
+      "semantic_type": "continuous",
+      "missing_pct": 0.0,
+      "n_unique": 58342,
+      "sample_vals": [
+        "0.0",
+        "0.0",
+        "0.0"
+      ],
+      "business_meaning": "Remaining outstanding principal for portion of total amount funded by investors",
+      "role": "leakage"
+    },
+    "total_pymnt": {
+      "dtype": "float64",
+      "semantic_type": "continuous",
+      "missing_pct": 0.0,
+      "n_unique": 153954,
+      "sample_vals": [
+        "383.65",
+        "2261.47",
+        "3390.598415"
+      ],
+      "business_meaning": "Payments received to date for total amount funded",
+      "role": "leakage"
+    },
+    "total_pymnt_inv": {
+      "dtype": "float64",
+      "semantic_type": "continuous",
+      "missing_pct": 0.0,
+      "n_unique": 155526,
+      "sample_vals": [
+        "383.65",
+        "2261.47",
+        "3390.6"
+      ],
+      "business_meaning": "Payments received to date for portion of total amount funded by investors",
+      "role": "leakage"
+    },
+    "total_rec_prncp": {
+      "dtype": "float64",
+      "semantic_type": "continuous",
+      "missing_pct": 0.0,
+      "n_unique": 75744,
+      "sample_vals": [
+        "269.3",
+        "2000.0",
+        "2400.0"
+      ],
+      "business_meaning": "Principal received to date",
+      "role": "leakage"
+    },
+    "total_rec_int": {
+      "dtype": "float64",
+      "semantic_type": "continuous",
+      "missing_pct": 0.0,
+      "n_unique": 136966,
+      "sample_vals": [
+        "89.06",
+        "261.47",
+        "990.6"
+      ],
+      "business_meaning": "Interest received to date",
+      "role": "leakage"
+    },
+    "total_rec_late_fee": {
+      "dtype": "float64",
+      "semantic_type": "continuous",
+      "missing_pct": 0.0,
+      "n_unique": 2997,
+      "sample_vals": [
+        "0.0",
+        "0.0",
+        "0.0"
+      ],
+      "business_meaning": "Late fees received to date",
+      "role": "leakage"
+    },
+    "recoveries": {
+      "dtype": "float64",
+      "semantic_type": "continuous",
+      "missing_pct": 0.0,
+      "n_unique": 11167,
+      "sample_vals": [
+        "25.29",
+        "0.0",
+        "0.0"
+      ],
+      "business_meaning": "post charge off gross recovery",
+      "role": "leakage"
+    },
+    "collection_recovery_fee": {
+      "dtype": "float64",
+      "semantic_type": "continuous",
+      "missing_pct": 0.0,
+      "n_unique": 10034,
+      "sample_vals": [
+        "0.34",
+        "0.0",
+        "0.0"
+      ],
+      "business_meaning": "post charge off collection fee",
+      "role": "leakage"
+    },
+    "last_pymnt_d": {
+      "dtype": "str",
+      "semantic_type": "high_cardinality_categorical",
+      "missing_pct": 0.0008,
+      "n_unique": 97,
+      "sample_vals": [
+        "12-Jun",
+        "12-Nov",
+        "14-Jun"
+      ],
+      "business_meaning": "Last month payment was received",
+      "role": "leakage"
+    },
+    "last_pymnt_amnt": {
+      "dtype": "float64",
+      "semantic_type": "continuous",
+      "missing_pct": 0.0,
+      "n_unique": 101861,
+      "sample_vals": [
+        "32.74",
+        "1265.67",
+        "1327.94"
+      ],
+      "business_meaning": "Last total payment amount received",
+      "role": "leakage"
+    },
+    "next_pymnt_d": {
+      "dtype": "str",
+      "semantic_type": "high_cardinality_categorical",
+      "missing_pct": 0.532,
+      "n_unique": 88,
+      "sample_vals": [
+        "16-Feb",
+        "16-Feb",
+        "16-Feb"
+      ],
+      "business_meaning": "Next scheduled payment date",
+      "role": "leakage"
+    },
+    "last_credit_pull_d": {
+      "dtype": "str",
+      "semantic_type": "high_cardinality_categorical",
+      "missing_pct": 0.0,
+      "n_unique": 98,
+      "sample_vals": [
+        "12-Nov",
+        "12-Nov",
+        "14-Jul"
+      ],
+      "business_meaning": "The most recent month LC pulled credit for this loan",
+      "role": "leakage"
+    },
+    "collections_12_mths_ex_med": {
+      "dtype": "float64",
+      "semantic_type": "temporal_numeric",
+      "missing_pct": 0.0001,
+      "n_unique": 5,
+      "sample_vals": [
+        "0.0",
+        "0.0",
+        "0.0"
+      ],
+      "business_meaning": "Number of collections in 12 months excluding medical collections",
+      "role": "categorical"
+    },
+    "mths_since_last_major_derog": {
+      "dtype": "float64",
+      "semantic_type": "temporal_numeric",
+      "missing_pct": 0.7966,
+      "n_unique": 156,
+      "sample_vals": [
+        "34.0",
+        "44.0",
+        "38.0"
+      ],
+      "business_meaning": "Months since most recent 90-day or worse rating",
+      "role": "date"
+    },
+    "policy_code": {
+      "dtype": "int64",
+      "semantic_type": "ordinal",
+      "missing_pct": 0.0,
+      "n_unique": 1,
+      "sample_vals": [
+        "1",
+        "1",
+        "1"
+      ],
+      "business_meaning": "publicly available policy_code=1\nnew products not publicly available policy_code=2",
+      "role": "identifier"
+    },
+    "application_type": {
+      "dtype": "str",
+      "semantic_type": "low_cardinality_categorical",
+      "missing_pct": 0.0,
+      "n_unique": 1,
+      "sample_vals": [
+        "INDIVIDUAL",
+        "INDIVIDUAL",
+        "INDIVIDUAL"
+      ],
+      "business_meaning": "Indicates whether the loan is an individual application or a joint application with two co-borrowers",
+      "role": "other"
+    },
+    "annual_inc_joint": {
+      "dtype": "float64",
+      "semantic_type": "ordinal",
+      "missing_pct": 1.0,
+      "n_unique": 0,
+      "sample_vals": [],
+      "business_meaning": "The combined self-reported annual income provided by the co-borrowers during registration",
+      "role": "categorical"
+    },
+    "dti_joint": {
+      "dtype": "float64",
+      "semantic_type": "ratio",
+      "missing_pct": 1.0,
+      "n_unique": 0,
+      "sample_vals": [],
+      "business_meaning": "A ratio calculated using the co-borrowers' total monthly payments on the total debt obligations, excluding mortgages and the requested LC loan, divided by the co-borrowers' combined self-reported monthly income",
+      "role": "categorical"
+    },
+    "verification_status_joint": {
+      "dtype": "float64",
+      "semantic_type": "ordinal",
+      "missing_pct": 1.0,
+      "n_unique": 0,
+      "sample_vals": [],
+      "business_meaning": "Verification Status Joint",
+      "role": "categorical"
+    },
+    "acc_now_delinq": {
+      "dtype": "float64",
+      "semantic_type": "temporal_numeric",
+      "missing_pct": 0.0001,
+      "n_unique": 5,
+      "sample_vals": [
+        "0.0",
+        "0.0",
+        "0.0"
+      ],
+      "business_meaning": "The number of accounts on which the borrower is now delinquent.",
+      "role": "date"
+    },
+    "tot_coll_amt": {
+      "dtype": "float64",
+      "semantic_type": "continuous",
+      "missing_pct": 0.1893,
+      "n_unique": 3944,
+      "sample_vals": [
+        "0.0",
+        "0.0",
+        "516.0"
+      ],
+      "business_meaning": "Total collection amounts ever owed",
+      "role": "numeric"
+    },
+    "tot_cur_bal": {
+      "dtype": "float64",
+      "semantic_type": "continuous",
+      "missing_pct": 0.1893,
+      "n_unique": 116913,
+      "sample_vals": [
+        "302838.0",
+        "26423.0",
+        "13877.0"
+      ],
+      "business_meaning": "Total current balance of all accounts",
+      "role": "numeric"
+    },
+    "open_acc_6m": {
+      "dtype": "float64",
+      "semantic_type": "ordinal",
+      "missing_pct": 1.0,
+      "n_unique": 0,
+      "sample_vals": [],
+      "business_meaning": "Number of open trades in last 6 months",
+      "role": "categorical"
+    },
+    "open_il_6m": {
+      "dtype": "float64",
+      "semantic_type": "ordinal",
+      "missing_pct": 1.0,
+      "n_unique": 0,
+      "sample_vals": [],
+      "business_meaning": "Open Installment Loan 6M",
+      "role": "categorical"
+    },
+    "open_il_12m": {
+      "dtype": "float64",
+      "semantic_type": "ordinal",
+      "missing_pct": 1.0,
+      "n_unique": 0,
+      "sample_vals": [],
+      "business_meaning": "Number of installment accounts opened in past 12 months",
+      "role": "categorical"
+    },
+    "open_il_24m": {
+      "dtype": "float64",
+      "semantic_type": "ordinal",
+      "missing_pct": 1.0,
+      "n_unique": 0,
+      "sample_vals": [],
+      "business_meaning": "Number of installment accounts opened in past 24 months",
+      "role": "categorical"
+    },
+    "mths_since_rcnt_il": {
+      "dtype": "float64",
+      "semantic_type": "temporal_numeric",
+      "missing_pct": 1.0,
+      "n_unique": 0,
+      "sample_vals": [],
+      "business_meaning": "Months since most recent installment accounts opened",
+      "role": "categorical"
+    },
+    "total_bal_il": {
+      "dtype": "float64",
+      "semantic_type": "ordinal",
+      "missing_pct": 1.0,
+      "n_unique": 0,
+      "sample_vals": [],
+      "business_meaning": "Total current balance of all installment accounts",
+      "role": "categorical"
+    },
+    "il_util": {
+      "dtype": "float64",
+      "semantic_type": "ordinal",
+      "missing_pct": 1.0,
+      "n_unique": 0,
+      "sample_vals": [],
+      "business_meaning": "Ratio of total current balance to high credit/credit limit on all install acct",
+      "role": "categorical"
+    },
+    "open_rv_12m": {
+      "dtype": "float64",
+      "semantic_type": "ordinal",
+      "missing_pct": 1.0,
+      "n_unique": 0,
+      "sample_vals": [],
+      "business_meaning": "Number of revolving trades opened in past 12 months",
+      "role": "categorical"
+    },
+    "open_rv_24m": {
+      "dtype": "float64",
+      "semantic_type": "ordinal",
+      "missing_pct": 1.0,
+      "n_unique": 0,
+      "sample_vals": [],
+      "business_meaning": "Number of revolving trades opened in past 24 months",
+      "role": "categorical"
+    },
+    "max_bal_bc": {
+      "dtype": "float64",
+      "semantic_type": "ordinal",
+      "missing_pct": 1.0,
+      "n_unique": 0,
+      "sample_vals": [],
+      "business_meaning": "Maximum current balance owed on all revolving accounts",
+      "role": "categorical"
+    },
+    "all_util": {
+      "dtype": "float64",
+      "semantic_type": "ordinal",
+      "missing_pct": 1.0,
+      "n_unique": 0,
+      "sample_vals": [],
+      "business_meaning": "Balance to credit limit on all trades",
+      "role": "categorical"
+    },
+    "total_rev_hi_lim": {
+      "dtype": "float64",
+      "semantic_type": "continuous",
+      "missing_pct": 0.1893,
+      "n_unique": 7766,
+      "sample_vals": [
+        "120600.0",
+        "37292.0",
+        "25300.0"
+      ],
+      "business_meaning": "Total revolving high credit/credit limit",
+      "role": "numeric"
+    },
+    "inq_fi": {
+      "dtype": "float64",
+      "semantic_type": "ordinal",
+      "missing_pct": 1.0,
+      "n_unique": 0,
+      "sample_vals": [],
+      "business_meaning": "Number of personal finance inquiries",
+      "role": "categorical"
+    },
+    "total_cu_tl": {
+      "dtype": "float64",
+      "semantic_type": "ordinal",
+      "missing_pct": 1.0,
+      "n_unique": 0,
+      "sample_vals": [],
+      "business_meaning": "Number of finance trades",
+      "role": "categorical"
+    },
+    "inq_last_12m": {
+      "dtype": "float64",
+      "semantic_type": "ordinal",
+      "missing_pct": 1.0,
+      "n_unique": 0,
+      "sample_vals": [],
+      "business_meaning": "Number of credit inquiries in past 12 months",
+      "role": "categorical"
+    }
+  },
+  "target_mapping": {
+    "Current": null,
+    "Fully Paid": 0,
+    "Charged Off": 1,
+    "Late (31-120 days)": null,
+    "In Grace Period": null,
+    "Does not meet the credit policy. Status:Fully Paid": 0,
+    "Late (16-30 days)": null,
+    "Does not meet the credit policy. Status:Charged Off": 1,
+    "Default": 1
+  },
+  "indeterminate_values": [
+    {
+      "value": "Current",
+      "count": 84053,
+      "reason": "Matches indeterminate pattern: 'current'"
+    },
+    {
+      "value": "Late (31-120 days)",
+      "count": 2619,
+      "reason": "Matches indeterminate pattern: 'late'"
+    },
+    {
+      "value": "In Grace Period",
+      "count": 1287,
+      "reason": "Matches indeterminate pattern: 'grace'"
+    },
+    {
+      "value": "Late (16-30 days)",
+      "count": 467,
+      "reason": "Matches indeterminate pattern: 'late'"
+    }
+  ],
+  "behavioral_leakage_flags": {
+    "int_rate": 0.6735
+  },
+  "dqr_flags": [
+    "\u26a0  'mths_since_last_record' is 87% missing \u2014 consider dropping or imputing carefully",
+    "\u26a0  'annual_inc_joint' is 100% missing \u2014 consider dropping or imputing carefully",
+    "\u26a0  'dti_joint' is 100% missing \u2014 consider dropping or imputing carefully",
+    "\u26a0  'verification_status_joint' is 100% missing \u2014 consider dropping or imputing carefully",
+    "\u26a0  'open_acc_6m' is 100% missing \u2014 consider dropping or imputing carefully",
+    "\u26a0  'open_il_6m' is 100% missing \u2014 consider dropping or imputing carefully",
+    "\u26a0  'open_il_12m' is 100% missing \u2014 consider dropping or imputing carefully",
+    "\u26a0  'open_il_24m' is 100% missing \u2014 consider dropping or imputing carefully",
+    "\u26a0  'mths_since_rcnt_il' is 100% missing \u2014 consider dropping or imputing carefully",
+    "\u26a0  'total_bal_il' is 100% missing \u2014 consider dropping or imputing carefully",
+    "\u26a0  'il_util' is 100% missing \u2014 consider dropping or imputing carefully",
+    "\u26a0  'open_rv_12m' is 100% missing \u2014 consider dropping or imputing carefully",
+    "\u26a0  'open_rv_24m' is 100% missing \u2014 consider dropping or imputing carefully",
+    "\u26a0  'max_bal_bc' is 100% missing \u2014 consider dropping or imputing carefully",
+    "\u26a0  'all_util' is 100% missing \u2014 consider dropping or imputing carefully",
+    "\u26a0  'inq_fi' is 100% missing \u2014 consider dropping or imputing carefully",
+    "\u26a0  'total_cu_tl' is 100% missing \u2014 consider dropping or imputing carefully",
+    "\u26a0  'inq_last_12m' is 100% missing \u2014 consider dropping or imputing carefully",
+    "\u26a0  'mths_since_last_delinq' is 58% missing \u2014 consider dropping or imputing carefully",
+    "\u26a0  'mths_since_last_major_derog' is 83% missing \u2014 consider dropping or imputing carefully",
+    "\u26a0  'delinq_2yrs' has 15,762 IQR outliers (15.1% of non-null)",
+    "\u26a0  'pub_rec' has 12,863 IQR outliers (12.4% of non-null)",
+    "\u26a0  'tot_coll_amt' has 8,230 IQR outliers (11.8% of non-null)"
+  ],
+  "dqr_report": {
+    "duplicates": {
+      "total_rows": 104164,
+      "duplicate_ids": 0,
+      "duplicate_members": 0
+    },
+    "missing": {
+      "loan_amnt": {
+        "n_missing": 0,
+        "pct_missing": 0.0
+      },
+      "funded_amnt": {
+        "n_missing": 0,
+        "pct_missing": 0.0
+      },
+      "funded_amnt_inv": {
+        "n_missing": 0,
+        "pct_missing": 0.0
+      },
+      "int_rate": {
+        "n_missing": 0,
+        "pct_missing": 0.0
+      },
+      "installment": {
+        "n_missing": 0,
+        "pct_missing": 0.0
+      },
+      "annual_inc": {
+        "n_missing": 1,
+        "pct_missing": 0.0
+      },
+      "dti": {
+        "n_missing": 0,
+        "pct_missing": 0.0
+      },
+      "delinq_2yrs": {
+        "n_missing": 21,
+        "pct_missing": 0.0002
+      },
+      "inq_last_6mths": {
+        "n_missing": 21,
+        "pct_missing": 0.0002
+      },
+      "mths_since_last_record": {
+        "n_missing": 90552,
+        "pct_missing": 0.8693
+      },
+      "open_acc": {
+        "n_missing": 21,
+        "pct_missing": 0.0002
+      },
+      "pub_rec": {
+        "n_missing": 21,
+        "pct_missing": 0.0002
+      },
+      "revol_bal": {
+        "n_missing": 0,
+        "pct_missing": 0.0
+      },
+      "revol_util": {
+        "n_missing": 115,
+        "pct_missing": 0.0011
+      },
+      "total_acc": {
+        "n_missing": 21,
+        "pct_missing": 0.0002
+      },
+      "tot_coll_amt": {
+        "n_missing": 34477,
+        "pct_missing": 0.331
+      },
+      "tot_cur_bal": {
+        "n_missing": 34477,
+        "pct_missing": 0.331
+      },
+      "total_rev_hi_lim": {
+        "n_missing": 34477,
+        "pct_missing": 0.331
+      },
+      "term": {
+        "n_missing": 0,
+        "pct_missing": 0.0
+      },
+      "grade": {
+        "n_missing": 0,
+        "pct_missing": 0.0
+      },
+      "sub_grade": {
+        "n_missing": 0,
+        "pct_missing": 0.0
+      },
+      "emp_length": {
+        "n_missing": 3917,
+        "pct_missing": 0.0376
+      },
+      "home_ownership": {
+        "n_missing": 0,
+        "pct_missing": 0.0
+      },
+      "verification_status": {
+        "n_missing": 0,
+        "pct_missing": 0.0
+      },
+      "purpose": {
+        "n_missing": 0,
+        "pct_missing": 0.0
+      },
+      "addr_state": {
+        "n_missing": 0,
+        "pct_missing": 0.0
+      },
+      "initial_list_status": {
+        "n_missing": 0,
+        "pct_missing": 0.0
+      },
+      "collections_12_mths_ex_med": {
+        "n_missing": 24,
+        "pct_missing": 0.0002
+      },
+      "annual_inc_joint": {
+        "n_missing": 104164,
+        "pct_missing": 1.0
+      },
+      "dti_joint": {
+        "n_missing": 104164,
+        "pct_missing": 1.0
+      },
+      "verification_status_joint": {
+        "n_missing": 104164,
+        "pct_missing": 1.0
+      },
+      "open_acc_6m": {
+        "n_missing": 104164,
+        "pct_missing": 1.0
+      },
+      "open_il_6m": {
+        "n_missing": 104164,
+        "pct_missing": 1.0
+      },
+      "open_il_12m": {
+        "n_missing": 104164,
+        "pct_missing": 1.0
+      },
+      "open_il_24m": {
+        "n_missing": 104164,
+        "pct_missing": 1.0
+      },
+      "mths_since_rcnt_il": {
+        "n_missing": 104164,
+        "pct_missing": 1.0
+      },
+      "total_bal_il": {
+        "n_missing": 104164,
+        "pct_missing": 1.0
+      },
+      "il_util": {
+        "n_missing": 104164,
+        "pct_missing": 1.0
+      },
+      "open_rv_12m": {
+        "n_missing": 104164,
+        "pct_missing": 1.0
+      },
+      "open_rv_24m": {
+        "n_missing": 104164,
+        "pct_missing": 1.0
+      },
+      "max_bal_bc": {
+        "n_missing": 104164,
+        "pct_missing": 1.0
+      },
+      "all_util": {
+        "n_missing": 104164,
+        "pct_missing": 1.0
+      },
+      "inq_fi": {
+        "n_missing": 104164,
+        "pct_missing": 1.0
+      },
+      "total_cu_tl": {
+        "n_missing": 104164,
+        "pct_missing": 1.0
+      },
+      "inq_last_12m": {
+        "n_missing": 104164,
+        "pct_missing": 1.0
+      },
+      "issue_d": {
+        "n_missing": 0,
+        "pct_missing": 0.0
+      },
+      "earliest_cr_line": {
+        "n_missing": 21,
+        "pct_missing": 0.0002
+      },
+      "mths_since_last_delinq": {
+        "n_missing": 60070,
+        "pct_missing": 0.5767
+      },
+      "mths_since_last_major_derog": {
+        "n_missing": 86894,
+        "pct_missing": 0.8342
+      },
+      "acc_now_delinq": {
+        "n_missing": 21,
+        "pct_missing": 0.0002
+      }
+    },
+    "outliers": {
+      "loan_amnt": {
+        "iqr_outliers": 0,
+        "zscore_outliers": 0,
+        "p1": 1600.0,
+        "p99": 35000.0,
+        "min": 500.0,
+        "max": 35000.0
+      },
+      "funded_amnt": {
+        "iqr_outliers": 0,
+        "zscore_outliers": 0,
+        "p1": 1600.0,
+        "p99": 35000.0,
+        "min": 500.0,
+        "max": 35000.0
+      },
+      "funded_amnt_inv": {
+        "iqr_outliers": 0,
+        "zscore_outliers": 0,
+        "p1": 1200.0,
+        "p99": 35000.0,
+        "min": 0.0,
+        "max": 35000.0
+      },
+      "int_rate": {
+        "iqr_outliers": 0,
+        "zscore_outliers": 0,
+        "p1": 6.03,
+        "p99": 24.08,
+        "min": 5.42,
+        "max": 26.06
+      },
+      "installment": {
+        "iqr_outliers": 0,
+        "zscore_outliers": 2,
+        "p1": 53.0626,
+        "p99": 1190.28,
+        "min": 15.67,
+        "max": 1408.13
+      },
+      "annual_inc": {
+        "iqr_outliers": 1391,
+        "zscore_outliers": 514,
+        "p1": 18000.0,
+        "p99": 234000.0,
+        "min": 3000.0,
+        "max": 6100000.0
+      },
+      "dti": {
+        "iqr_outliers": 0,
+        "zscore_outliers": 0,
+        "p1": 1.1,
+        "p99": 33.08,
+        "min": 0.0,
+        "max": 34.99
+      },
+      "delinq_2yrs": {
+        "iqr_outliers": 15762,
+        "zscore_outliers": 799,
+        "p1": 0.0,
+        "p99": 3.0,
+        "min": 0.0,
+        "max": 29.0
+      },
+      "inq_last_6mths": {
+        "iqr_outliers": 1417,
+        "zscore_outliers": 588,
+        "p1": 0.0,
+        "p99": 5.0,
+        "min": 0.0,
+        "max": 33.0
+      },
+      "mths_since_last_record": {
+        "iqr_outliers": 0,
+        "zscore_outliers": 0,
+        "p1": 0.0,
+        "p99": 118.0,
+        "min": 0.0,
+        "max": 129.0
+      },
+      "open_acc": {
+        "iqr_outliers": 230,
+        "zscore_outliers": 279,
+        "p1": 3.0,
+        "p99": 25.0,
+        "min": 0.0,
+        "max": 52.0
+      },
+      "pub_rec": {
+        "iqr_outliers": 12863,
+        "zscore_outliers": 1400,
+        "p1": 0.0,
+        "p99": 2.0,
+        "min": 0.0,
+        "max": 11.0
+      },
+      "revol_bal": {
+        "iqr_outliers": 1911,
+        "zscore_outliers": 768,
+        "p1": 44.0,
+        "p99": 78497.14,
+        "min": 0.0,
+        "max": 1743266.0
+      },
+      "revol_util": {
+        "iqr_outliers": 1,
+        "zscore_outliers": 1,
+        "p1": 0.4,
+        "p99": 97.5,
+        "min": 0.0,
+        "max": 892.3
+      },
+      "total_acc": {
+        "iqr_outliers": 9,
+        "zscore_outliers": 34,
+        "p1": 5.0,
+        "p99": 59.0,
+        "min": 1.0,
+        "max": 91.0
+      },
+      "tot_coll_amt": {
+        "iqr_outliers": 8230,
+        "zscore_outliers": 1,
+        "p1": 0.0,
+        "p99": 3130.14,
+        "min": 0.0,
+        "max": 9152545.0
+      },
+      "tot_cur_bal": {
+        "iqr_outliers": 346,
+        "zscore_outliers": 373,
+        "p1": 3318.86,
+        "p99": 638430.1,
+        "min": 0.0,
+        "max": 4772549.0
+      },
+      "total_rev_hi_lim": {
+        "iqr_outliers": 1268,
+        "zscore_outliers": 547,
+        "p1": 3000.0,
+        "p99": 129939.8,
+        "min": 0.0,
+        "max": 2013133.0
+      }
+    },
+    "consistency_checks": [
+      {
+        "Rule": "funded_amnt <= loan_amnt",
+        "Description": "Funded amount cannot exceed loan amount",
+        "Violations": 0,
+        "Status": "PASS"
+      },
+      {
+        "Rule": "int_rate \u2208 [0, 100]",
+        "Description": "Interest rate must be a valid percentage",
+        "Violations": 0,
+        "Status": "PASS"
+      },
+      {
+        "Rule": "term \u2208 {36, 60}",
+        "Description": "Only standard loan terms expected",
+        "Violations": 0,
+        "Status": "PASS"
+      },
+      {
+        "Rule": "grade \u2208 A\u2013G",
+        "Description": "Only valid grade letters",
+        "Violations": 0,
+        "Status": "PASS"
+      },
+      {
+        "Rule": "dti >= 0",
+        "Description": "Debt-to-income ratio cannot be negative",
+        "Violations": 0,
+        "Status": "PASS"
+      },
+      {
+        "Rule": "annual_inc >= 0",
+        "Description": "Income cannot be negative",
+        "Violations": 0,
+        "Status": "PASS"
+      },
+      {
+        "Rule": "revol_util \u2208 [0, 200]",
+        "Description": "Revolving utilisation must be a plausible percentage",
+        "Violations": 1,
+        "Status": "FAIL"
+      }
+    ],
+    "consistency_summary": {
+      "total_rules": 7,
+      "passed": 6,
+      "failed": 1,
+      "note": "7 of 7 possible rules applicable to this dataset (some columns may not exist in Dataset 2)"
+    },
+    "distributions": {
+      "loan_amnt": {
+        "type": "numeric",
+        "mean": 13551.4312,
+        "std": 8053.9972,
+        "p5": 3100.0,
+        "p25": 7500.0,
+        "median": 12000.0,
+        "p75": 18200.0,
+        "p95": 30000.0,
+        "skewness": 0.831,
+        "missing_pct": 0.0
+      },
+      "funded_amnt": {
+        "type": "numeric",
+        "mean": 13511.4274,
+        "std": 8030.5627,
+        "p5": 3075.0,
+        "p25": 7400.0,
+        "median": 12000.0,
+        "p75": 18000.0,
+        "p95": 30000.0,
+        "skewness": 0.8366,
+        "missing_pct": 0.0
+      },
+      "funded_amnt_inv": {
+        "type": "numeric",
+        "mean": 13348.7901,
+        "std": 8079.6979,
+        "p5": 3000.0,
+        "p25": 7175.0,
+        "median": 11950.0,
+        "p75": 18000.0,
+        "p95": 30000.0,
+        "skewness": 0.8314,
+        "missing_pct": 0.0
+      },
+      "int_rate": {
+        "type": "numeric",
+        "mean": 13.7614,
+        "std": 4.2794,
+        "p5": 6.99,
+        "p25": 10.74,
+        "median": 13.65,
+        "p75": 16.29,
+        "p95": 21.48,
+        "skewness": 0.2822,
+        "missing_pct": 0.0
+      },
+      "installment": {
+        "type": "numeric",
+        "mean": 420.2359,
+        "std": 243.1052,
+        "p5": 105.349,
+        "p25": 242.57,
+        "median": 368.45,
+        "p75": 549.1325,
+        "p95": 890.65,
+        "skewness": 0.9831,
+        "missing_pct": 0.0
+      },
+      "annual_inc": {
+        "type": "numeric",
+        "mean": 72208.346,
+        "std": 55483.8486,
+        "p5": 27000.0,
+        "p25": 45000.0,
+        "median": 62000.0,
+        "p75": 87000.0,
+        "p95": 147000.0,
+        "skewness": 31.3434,
+        "missing_pct": 0.0
+      },
+      "dti": {
+        "type": "numeric",
+        "mean": 16.0785,
+        "std": 7.4667,
+        "p5": 4.1,
+        "p25": 10.54,
+        "median": 15.86,
+        "p75": 21.41,
+        "p95": 28.94,
+        "skewness": 0.1397,
+        "missing_pct": 0.0
+      },
+      "delinq_2yrs": {
+        "type": "numeric",
+        "mean": 0.2327,
+        "std": 0.7104,
+        "p5": 0.0,
+        "p25": 0.0,
+        "median": 0.0,
+        "p75": 0.0,
+        "p95": 1.0,
+        "skewness": 6.0916,
+        "missing_pct": 0.0002
+      },
+      "inq_last_6mths": {
+        "type": "numeric",
+        "mean": 0.9263,
+        "std": 1.189,
+        "p5": 0.0,
+        "p25": 0.0,
+        "median": 1.0,
+        "p75": 1.0,
+        "p95": 3.0,
+        "skewness": 2.274,
+        "missing_pct": 0.0002
+      },
+      "mths_since_last_record": {
+        "type": "numeric",
+        "mean": 74.4963,
+        "std": 32.6585,
+        "p5": 0.0,
+        "p25": 52.0,
+        "median": 81.0,
+        "p75": 103.0,
+        "p95": 115.0,
+        "skewness": -0.6577,
+        "missing_pct": 0.8693
+      },
+      "open_acc": {
+        "type": "numeric",
+        "mean": 10.7946,
+        "std": 4.8055,
+        "p5": 4.0,
+        "p25": 7.0,
+        "median": 10.0,
+        "p75": 13.0,
+        "p95": 20.0,
+        "skewness": 1.0994,
+        "missing_pct": 0.0002
+      },
+      "pub_rec": {
+        "type": "numeric",
+        "mean": 0.1438,
+        "std": 0.4343,
+        "p5": 0.0,
+        "p25": 0.0,
+        "median": 0.0,
+        "p75": 0.0,
+        "p95": 1.0,
+        "skewness": 4.8021,
+        "missing_pct": 0.0002
+      },
+      "revol_bal": {
+        "type": "numeric",
+        "mean": 15168.3712,
+        "std": 19146.7665,
+        "p5": 1387.0,
+        "p25": 5863.0,
+        "median": 10962.5,
+        "p75": 19117.25,
+        "p95": 39000.7,
+        "skewness": 16.5202,
+        "missing_pct": 0.0
+      },
+      "revol_util": {
+        "type": "numeric",
+        "mean": 55.0045,
+        "std": 24.8727,
+        "p5": 10.2,
+        "p25": 37.2,
+        "median": 56.8,
+        "p75": 74.5,
+        "p95": 92.4,
+        "skewness": 0.0909,
+        "missing_pct": 0.0011
+      },
+      "total_acc": {
+        "type": "numeric",
+        "mean": 24.7465,
+        "std": 11.6155,
+        "p5": 9.0,
+        "p25": 16.0,
+        "median": 23.0,
+        "p75": 32.0,
+        "p95": 47.0,
+        "skewness": 0.7461,
+        "missing_pct": 0.0002
+      },
+      "tot_coll_amt": {
+        "type": "numeric",
+        "mean": 291.9491,
+        "std": 34702.3857,
+        "p5": 0.0,
+        "p25": 0.0,
+        "median": 0.0,
+        "p75": 0.0,
+        "p95": 409.0,
+        "skewness": 263.2546,
+        "missing_pct": 0.331
+      },
+      "tot_cur_bal": {
+        "type": "numeric",
+        "mean": 138743.432,
+        "std": 150592.5611,
+        "p5": 8538.3,
+        "p25": 28265.0,
+        "median": 82748.0,
+        "p75": 209805.5,
+        "p95": 418302.8,
+        "skewness": 2.8447,
+        "missing_pct": 0.331
+      },
+      "total_rev_hi_lim": {
+        "type": "numeric",
+        "mean": 29129.1979,
+        "std": 28155.9908,
+        "p5": 6000.0,
+        "p25": 13200.0,
+        "median": 22100.0,
+        "p75": 36400.0,
+        "p95": 73200.0,
+        "skewness": 9.3021,
+        "missing_pct": 0.331
+      },
+      "term": {
+        "type": "numeric",
+        "mean": 40.9934,
+        "std": 9.7421,
+        "p5": 36.0,
+        "p25": 36.0,
+        "median": 36.0,
+        "p75": 36.0,
+        "p95": 60.0,
+        "skewness": 1.4385,
+        "missing_pct": 0.0
+      },
+      "grade": {
+        "type": "numeric",
+        "mean": NaN,
+        "std": NaN,
+        "p5": NaN,
+        "p25": NaN,
+        "median": NaN,
+        "p75": NaN,
+        "p95": NaN,
+        "skewness": NaN,
+        "missing_pct": 0.0
+      },
+      "sub_grade": {
+        "type": "numeric",
+        "mean": NaN,
+        "std": NaN,
+        "p5": NaN,
+        "p25": NaN,
+        "median": NaN,
+        "p75": NaN,
+        "p95": NaN,
+        "skewness": NaN,
+        "missing_pct": 0.0
+      },
+      "emp_length": {
+        "type": "numeric",
+        "mean": 5.8474,
+        "std": 3.4865,
+        "p5": 0.9,
+        "p25": 2.0,
+        "median": 6.0,
+        "p75": 10.0,
+        "p95": 10.0,
+        "skewness": -0.0618,
+        "missing_pct": 0.0376
+      },
+      "home_ownership": {
+        "type": "numeric",
+        "mean": NaN,
+        "std": NaN,
+        "p5": NaN,
+        "p25": NaN,
+        "median": NaN,
+        "p75": NaN,
+        "p95": NaN,
+        "skewness": NaN,
+        "missing_pct": 0.0
+      },
+      "verification_status": {
+        "type": "numeric",
+        "mean": NaN,
+        "std": NaN,
+        "p5": NaN,
+        "p25": NaN,
+        "median": NaN,
+        "p75": NaN,
+        "p95": NaN,
+        "skewness": NaN,
+        "missing_pct": 0.0
+      },
+      "purpose": {
+        "type": "numeric",
+        "mean": NaN,
+        "std": NaN,
+        "p5": NaN,
+        "p25": NaN,
+        "median": NaN,
+        "p75": NaN,
+        "p95": NaN,
+        "skewness": NaN,
+        "missing_pct": 0.0
+      },
+      "addr_state": {
+        "type": "numeric",
+        "mean": NaN,
+        "std": NaN,
+        "p5": NaN,
+        "p25": NaN,
+        "median": NaN,
+        "p75": NaN,
+        "p95": NaN,
+        "skewness": NaN,
+        "missing_pct": 0.0
+      },
+      "initial_list_status": {
+        "type": "numeric",
+        "mean": NaN,
+        "std": NaN,
+        "p5": NaN,
+        "p25": NaN,
+        "median": NaN,
+        "p75": NaN,
+        "p95": NaN,
+        "skewness": NaN,
+        "missing_pct": 0.0
+      },
+      "collections_12_mths_ex_med": {
+        "type": "numeric",
+        "mean": 0.006,
+        "std": 0.0833,
+        "p5": 0.0,
+        "p25": 0.0,
+        "median": 0.0,
+        "p75": 0.0,
+        "p95": 0.0,
+        "skewness": 16.7747,
+        "missing_pct": 0.0002
+      },
+      "annual_inc_joint": {
+        "type": "numeric",
+        "mean": NaN,
+        "std": NaN,
+        "p5": NaN,
+        "p25": NaN,
+        "median": NaN,
+        "p75": NaN,
+        "p95": NaN,
+        "skewness": NaN,
+        "missing_pct": 1.0
+      },
+      "dti_joint": {
+        "type": "numeric",
+        "mean": NaN,
+        "std": NaN,
+        "p5": NaN,
+        "p25": NaN,
+        "median": NaN,
+        "p75": NaN,
+        "p95": NaN,
+        "skewness": NaN,
+        "missing_pct": 1.0
+      },
+      "verification_status_joint": {
+        "type": "numeric",
+        "mean": NaN,
+        "std": NaN,
+        "p5": NaN,
+        "p25": NaN,
+        "median": NaN,
+        "p75": NaN,
+        "p95": NaN,
+        "skewness": NaN,
+        "missing_pct": 1.0
+      },
+      "open_acc_6m": {
+        "type": "numeric",
+        "mean": NaN,
+        "std": NaN,
+        "p5": NaN,
+        "p25": NaN,
+        "median": NaN,
+        "p75": NaN,
+        "p95": NaN,
+        "skewness": NaN,
+        "missing_pct": 1.0
+      },
+      "open_il_6m": {
+        "type": "numeric",
+        "mean": NaN,
+        "std": NaN,
+        "p5": NaN,
+        "p25": NaN,
+        "median": NaN,
+        "p75": NaN,
+        "p95": NaN,
+        "skewness": NaN,
+        "missing_pct": 1.0
+      },
+      "open_il_12m": {
+        "type": "numeric",
+        "mean": NaN,
+        "std": NaN,
+        "p5": NaN,
+        "p25": NaN,
+        "median": NaN,
+        "p75": NaN,
+        "p95": NaN,
+        "skewness": NaN,
+        "missing_pct": 1.0
+      },
+      "open_il_24m": {
+        "type": "numeric",
+        "mean": NaN,
+        "std": NaN,
+        "p5": NaN,
+        "p25": NaN,
+        "median": NaN,
+        "p75": NaN,
+        "p95": NaN,
+        "skewness": NaN,
+        "missing_pct": 1.0
+      },
+      "mths_since_rcnt_il": {
+        "type": "numeric",
+        "mean": NaN,
+        "std": NaN,
+        "p5": NaN,
+        "p25": NaN,
+        "median": NaN,
+        "p75": NaN,
+        "p95": NaN,
+        "skewness": NaN,
+        "missing_pct": 1.0
+      },
+      "total_bal_il": {
+        "type": "numeric",
+        "mean": NaN,
+        "std": NaN,
+        "p5": NaN,
+        "p25": NaN,
+        "median": NaN,
+        "p75": NaN,
+        "p95": NaN,
+        "skewness": NaN,
+        "missing_pct": 1.0
+      },
+      "il_util": {
+        "type": "numeric",
+        "mean": NaN,
+        "std": NaN,
+        "p5": NaN,
+        "p25": NaN,
+        "median": NaN,
+        "p75": NaN,
+        "p95": NaN,
+        "skewness": NaN,
+        "missing_pct": 1.0
+      },
+      "open_rv_12m": {
+        "type": "numeric",
+        "mean": NaN,
+        "std": NaN,
+        "p5": NaN,
+        "p25": NaN,
+        "median": NaN,
+        "p75": NaN,
+        "p95": NaN,
+        "skewness": NaN,
+        "missing_pct": 1.0
+      },
+      "open_rv_24m": {
+        "type": "numeric",
+        "mean": NaN,
+        "std": NaN,
+        "p5": NaN,
+        "p25": NaN,
+        "median": NaN,
+        "p75": NaN,
+        "p95": NaN,
+        "skewness": NaN,
+        "missing_pct": 1.0
+      },
+      "max_bal_bc": {
+        "type": "numeric",
+        "mean": NaN,
+        "std": NaN,
+        "p5": NaN,
+        "p25": NaN,
+        "median": NaN,
+        "p75": NaN,
+        "p95": NaN,
+        "skewness": NaN,
+        "missing_pct": 1.0
+      },
+      "all_util": {
+        "type": "numeric",
+        "mean": NaN,
+        "std": NaN,
+        "p5": NaN,
+        "p25": NaN,
+        "median": NaN,
+        "p75": NaN,
+        "p95": NaN,
+        "skewness": NaN,
+        "missing_pct": 1.0
+      },
+      "inq_fi": {
+        "type": "numeric",
+        "mean": NaN,
+        "std": NaN,
+        "p5": NaN,
+        "p25": NaN,
+        "median": NaN,
+        "p75": NaN,
+        "p95": NaN,
+        "skewness": NaN,
+        "missing_pct": 1.0
+      },
+      "total_cu_tl": {
+        "type": "numeric",
+        "mean": NaN,
+        "std": NaN,
+        "p5": NaN,
+        "p25": NaN,
+        "median": NaN,
+        "p75": NaN,
+        "p95": NaN,
+        "skewness": NaN,
+        "missing_pct": 1.0
+      },
+      "inq_last_12m": {
+        "type": "numeric",
+        "mean": NaN,
+        "std": NaN,
+        "p5": NaN,
+        "p25": NaN,
+        "median": NaN,
+        "p75": NaN,
+        "p95": NaN,
+        "skewness": NaN,
+        "missing_pct": 1.0
+      },
+      "issue_d": {
+        "type": "numeric",
+        "mean": NaN,
+        "std": NaN,
+        "p5": NaN,
+        "p25": NaN,
+        "median": NaN,
+        "p75": NaN,
+        "p95": NaN,
+        "skewness": NaN,
+        "missing_pct": 0.0
+      },
+      "earliest_cr_line": {
+        "type": "numeric",
+        "mean": NaN,
+        "std": NaN,
+        "p5": NaN,
+        "p25": NaN,
+        "median": NaN,
+        "p75": NaN,
+        "p95": NaN,
+        "skewness": NaN,
+        "missing_pct": 0.0002
+      },
+      "mths_since_last_delinq": {
+        "type": "numeric",
+        "mean": 34.8796,
+        "std": 21.7759,
+        "p5": 5.0,
+        "p25": 16.0,
+        "median": 32.0,
+        "p75": 50.0,
+        "p95": 75.0,
+        "skewness": 0.4014,
+        "missing_pct": 0.5767
+      },
+      "mths_since_last_major_derog": {
+        "type": "numeric",
+        "mean": 42.8241,
+        "std": 21.6396,
+        "p5": 9.0,
+        "p25": 26.0,
+        "median": 42.0,
+        "p75": 59.0,
+        "p95": 77.0,
+        "skewness": 0.2928,
+        "missing_pct": 0.8342
+      },
+      "acc_now_delinq": {
+        "type": "numeric",
+        "mean": 0.0027,
+        "std": 0.0551,
+        "p5": 0.0,
+        "p25": 0.0,
+        "median": 0.0,
+        "p75": 0.0,
+        "p95": 0.0,
+        "skewness": 23.6676,
+        "missing_pct": 0.0002
+      }
+    },
+    "target_rates": {
+      "loan_amnt": [
+        {
+          "_band": "(499.999, 6400.0]",
+          "default_rate": 0.16674530527507786,
+          "n": 21194
+        },
+        {
+          "_band": "(6400.0, 10000.0]",
+          "default_rate": 0.17943720306980143,
+          "n": 24627
+        },
+        {
+          "_band": "(10000.0, 14400.0]",
+          "default_rate": 0.18917349131672184,
+          "n": 17217
+        },
+        {
+          "_band": "(14400.0, 20000.0]",
+          "default_rate": 0.21271217045864932,
+          "n": 22152
+        },
+        {
+          "_band": "(20000.0, 35000.0]",
+          "default_rate": 0.2374828712975651,
+          "n": 18974
+        }
+      ],
+      "funded_amnt": [
+        {
+          "_band": "(499.999, 6350.0]",
+          "default_rate": 0.1678663979268644,
+          "n": 20838
+        },
+        {
+          "_band": "(6350.0, 10000.0]",
+          "default_rate": 0.17829241071428573,
+          "n": 25088
+        },
+        {
+          "_band": "(10000.0, 14250.0]",
+          "default_rate": 0.18928700687658342,
+          "n": 16578
+        },
+        {
+          "_band": "(14250.0, 20000.0]",
+          "default_rate": 0.21242458686718546,
+          "n": 22874
+        },
+        {
+          "_band": "(20000.0, 35000.0]",
+          "default_rate": 0.23741083785797934,
+          "n": 18786
+        }
+      ],
+      "funded_amnt_inv": [
+        {
+          "_band": "(-0.001, 6000.0]",
+          "default_rate": 0.17046261660116482,
+          "n": 21119
+        },
+        {
+          "_band": "(6000.0, 10000.0]",
+          "default_rate": 0.1789613743983094,
+          "n": 25553
+        },
+        {
+          "_band": "(10000.0, 14000.0]",
+          "default_rate": 0.1873152709359606,
+          "n": 16240
+        },
+        {
+          "_band": "(14000.0, 20000.0]",
+          "default_rate": 0.2131039046988749,
+          "n": 22665
+        },
+        {
+          "_band": "(20000.0, 35000.0]",
+          "default_rate": 0.23580997471350945,
+          "n": 18587
+        }
+      ],
+      "int_rate": [
+        {
+          "_band": "(5.419, 9.91]",
+          "default_rate": 0.07480711170748071,
+          "n": 20867
+        },
+        {
+          "_band": "(9.91, 12.53]",
+          "default_rate": 0.13331733077292368,
+          "n": 20830
+        },
+        {
+          "_band": "(12.53, 14.59]",
+          "default_rate": 0.1823941633867716,
+          "n": 20834
+        },
+        {
+          "_band": "(14.59, 17.57]",
+          "default_rate": 0.24863290004482294,
+          "n": 22310
+        },
+        {
+          "_band": "(17.57, 26.06]",
+          "default_rate": 0.3489623764425814,
+          "n": 19323
+        }
+      ],
+      "installment": [
+        {
+          "_band": "(15.669, 209.82]",
+          "default_rate": 0.16411536062191084,
+          "n": 20839
+        },
+        {
+          "_band": "(209.82, 323.43]",
+          "default_rate": 0.18256863121520445,
+          "n": 20836
+        },
+        {
+          "_band": "(323.43, 432.43]",
+          "default_rate": 0.20056659944300395,
+          "n": 20826
+        },
+        {
+          "_band": "(432.43, 607.45]",
+          "default_rate": 0.2231920199501247,
+          "n": 20852
+        },
+        {
+          "_band": "(607.45, 1408.13]",
+          "default_rate": 0.2101292585651819,
+          "n": 20811
+        }
+      ],
+      "annual_inc": [
+        {
+          "_band": "(2999.999, 40800.0]",
+          "default_rate": 0.25225182062092755,
+          "n": 20872
+        },
+        {
+          "_band": "(40800.0, 55000.0]",
+          "default_rate": 0.21573013600572655,
+          "n": 22352
+        },
+        {
+          "_band": "(55000.0, 70000.0]",
+          "default_rate": 0.19914564686737185,
+          "n": 19664
+        },
+        {
+          "_band": "(70000.0, 95000.0]",
+          "default_rate": 0.16693579027355623,
+          "n": 21056
+        },
+        {
+          "_band": "(95000.0, 6100000.0]",
+          "default_rate": 0.14392403185122904,
+          "n": 20219
+        }
+      ],
+      "dti": [
+        {
+          "_band": "(-0.001, 9.29]",
+          "default_rate": 0.14027931084129194,
+          "n": 20837
+        },
+        {
+          "_band": "(9.29, 13.8]",
+          "default_rate": 0.16762617539819613,
+          "n": 20844
+        },
+        {
+          "_band": "(13.8, 17.95]",
+          "default_rate": 0.18671661143927387,
+          "n": 20823
+        },
+        {
+          "_band": "(17.95, 22.73]",
+          "default_rate": 0.21532339262597688,
+          "n": 20857
+        },
+        {
+          "_band": "(22.73, 34.99]",
+          "default_rate": 0.27073018314666153,
+          "n": 20803
+        }
+      ],
+      "delinq_2yrs": [
+        {
+          "_band": "(-0.001, 29.0]",
+          "default_rate": 0.1961245594999184,
+          "n": 104143
+        }
+      ],
+      "inq_last_6mths": [
+        {
+          "_band": "(-0.001, 1.0]",
+          "default_rate": 0.18495611039437404,
+          "n": 79062
+        },
+        {
+          "_band": "(1.0, 2.0]",
+          "default_rate": 0.21863945578231292,
+          "n": 14700
+        },
+        {
+          "_band": "(2.0, 33.0]",
+          "default_rate": 0.24930160870821694,
+          "n": 10381
+        }
+      ],
+      "mths_since_last_record": [
+        {
+          "_band": "(-0.001, 46.0]",
+          "default_rate": 0.194596568090544,
+          "n": 2739
+        },
+        {
+          "_band": "(46.0, 68.0]",
+          "default_rate": 0.1696165191740413,
+          "n": 2712
+        },
+        {
+          "_band": "(68.0, 91.0]",
+          "default_rate": 0.22751701898960947,
+          "n": 2791
+        },
+        {
+          "_band": "(91.0, 105.0]",
+          "default_rate": 0.22663723325974983,
+          "n": 2718
+        },
+        {
+          "_band": "(105.0, 129.0]",
+          "default_rate": 0.21945701357466063,
+          "n": 2652
+        }
+      ],
+      "term": [
+        {
+          "term": 36,
+          "default_rate": 0.16287640013577073,
+          "n": 82492
+        },
+        {
+          "term": 60,
+          "default_rate": 0.3226282761166482,
+          "n": 21672
+        }
+      ],
+      "grade": [
+        {
+          "grade": "A",
+          "default_rate": 0.06716460136932043,
+          "n": 17673
+        },
+        {
+          "grade": "B",
+          "default_rate": 0.13898792769124915,
+          "n": 31974
+        },
+        {
+          "grade": "C",
+          "default_rate": 0.21830143540669855,
+          "n": 26752
+        },
+        {
+          "grade": "D",
+          "default_rate": 0.2836376741950985,
+          "n": 16648
+        },
+        {
+          "grade": "E",
+          "default_rate": 0.35866057019903175,
+          "n": 7436
+        },
+        {
+          "grade": "F",
+          "default_rate": 0.4246153846153846,
+          "n": 2925
+        },
+        {
+          "grade": "G",
+          "default_rate": 0.4312169312169312,
+          "n": 756
+        }
+      ],
+      "sub_grade": [
+        {
+          "sub_grade": "A1",
+          "default_rate": 0.0369257191927866,
+          "n": 2329
+        },
+        {
+          "sub_grade": "A2",
+          "default_rate": 0.0444624090541633,
+          "n": 2474
+        },
+        {
+          "sub_grade": "A3",
+          "default_rate": 0.06405806248027769,
+          "n": 3169
+        },
+        {
+          "sub_grade": "A4",
+          "default_rate": 0.07233584499461787,
+          "n": 4645
+        },
+        {
+          "sub_grade": "A5",
+          "default_rate": 0.0893987341772152,
+          "n": 5056
+        },
+        {
+          "sub_grade": "B1",
+          "default_rate": 0.11682055399437977,
+          "n": 4982
+        },
+        {
+          "sub_grade": "B2",
+          "default_rate": 0.11899857391855491,
+          "n": 6311
+        },
+        {
+          "sub_grade": "B3",
+          "default_rate": 0.13681753339385294,
+          "n": 7711
+        },
+        {
+          "sub_grade": "B4",
+          "default_rate": 0.15032589099986132,
+          "n": 7211
+        },
+        {
+          "sub_grade": "B5",
+          "default_rate": 0.16877930196214622,
+          "n": 5759
+        },
+        {
+          "sub_grade": "C1",
+          "default_rate": 0.18612353038582546,
+          "n": 6039
+        },
+        {
+          "sub_grade": "C2",
+          "default_rate": 0.20062970089207627,
+          "n": 5717
+        },
+        {
+          "sub_grade": "C3",
+          "default_rate": 0.22968397291196388,
+          "n": 5316
+        },
+        {
+          "sub_grade": "C4",
+          "default_rate": 0.23407707910750508,
+          "n": 4930
+        },
+        {
+          "sub_grade": "C5",
+          "default_rate": 0.2513684210526316,
+          "n": 4750
+        },
+        {
+          "sub_grade": "D1",
+          "default_rate": 0.26499032882011603,
+          "n": 4136
+        },
+        {
+          "sub_grade": "D2",
+          "default_rate": 0.2735088662009672,
+          "n": 3722
+        },
+        {
+          "sub_grade": "D3",
+          "default_rate": 0.27506112469437655,
+          "n": 3272
+        },
+        {
+          "sub_grade": "D4",
+          "default_rate": 0.3125621478289692,
+          "n": 3017
+        },
+        {
+          "sub_grade": "D5",
+          "default_rate": 0.30587764894042385,
+          "n": 2501
+        },
+        {
+          "sub_grade": "E1",
+          "default_rate": 0.33874580067189247,
+          "n": 1786
+        },
+        {
+          "sub_grade": "E2",
+          "default_rate": 0.3538800220143093,
+          "n": 1817
+        },
+        {
+          "sub_grade": "E3",
+          "default_rate": 0.35274652547981467,
+          "n": 1511
+        },
+        {
+          "sub_grade": "E4",
+          "default_rate": 0.3764892772041303,
+          "n": 1259
+        },
+        {
+          "sub_grade": "E5",
+          "default_rate": 0.38758231420507994,
+          "n": 1063
+        },
+        {
+          "sub_grade": "F1",
+          "default_rate": 0.3893491124260355,
+          "n": 845
+        },
+        {
+          "sub_grade": "F2",
+          "default_rate": 0.40175953079178883,
+          "n": 682
+        },
+        {
+          "sub_grade": "F3",
+          "default_rate": 0.45166666666666666,
+          "n": 600
+        },
+        {
+          "sub_grade": "F4",
+          "default_rate": 0.45434298440979953,
+          "n": 449
+        },
+        {
+          "sub_grade": "F5",
+          "default_rate": 0.4699140401146132,
+          "n": 349
+        },
+        {
+          "sub_grade": "G1",
+          "default_rate": 0.4485294117647059,
+          "n": 272
+        },
+        {
+          "sub_grade": "G2",
+          "default_rate": 0.44329896907216493,
+          "n": 194
+        },
+        {
+          "sub_grade": "G3",
+          "default_rate": 0.4214876033057851,
+          "n": 121
+        },
+        {
+          "sub_grade": "G4",
+          "default_rate": 0.4155844155844156,
+          "n": 77
+        },
+        {
+          "sub_grade": "G5",
+          "default_rate": 0.3804347826086957,
+          "n": 92
+        }
+      ],
+      "emp_length": [
+        {
+          "emp_length": 0.9,
+          "default_rate": 0.18974892976975588,
+          "n": 8643
+        },
+        {
+          "emp_length": 1.0,
+          "default_rate": 0.18481561822125814,
+          "n": 6915
+        },
+        {
+          "emp_length": 2.0,
+          "default_rate": 0.18527508090614886,
+          "n": 9888
+        },
+        {
+          "emp_length": 3.0,
+          "default_rate": 0.19118840579710145,
+          "n": 8625
+        },
+        {
+          "emp_length": 4.0,
+          "default_rate": 0.18049640182111912,
+          "n": 6809
+        },
+        {
+          "emp_length": 5.0,
+          "default_rate": 0.19492725634092958,
+          "n": 7767
+        },
+        {
+          "emp_length": 6.0,
+          "default_rate": 0.19820245979186377,
+          "n": 6342
+        },
+        {
+          "emp_length": 7.0,
+          "default_rate": 0.2038249483115093,
+          "n": 5804
+        },
+        {
+          "emp_length": 8.0,
+          "default_rate": 0.20884468895471858,
+          "n": 4726
+        },
+        {
+          "emp_length": 9.0,
+          "default_rate": 0.2030037546933667,
+          "n": 3995
+        },
+        {
+          "emp_length": 10.0,
+          "default_rate": 0.19334266098330785,
+          "n": 30733
+        }
+      ],
+      "home_ownership": [
+        {
+          "home_ownership": "MORTGAGE",
+          "default_rate": 0.17665942411963906,
+          "n": 51087
+        },
+        {
+          "home_ownership": "NONE",
+          "default_rate": 0.0,
+          "n": 2
+        },
+        {
+          "home_ownership": "OTHER",
+          "default_rate": 0.25,
+          "n": 76
+        },
+        {
+          "home_ownership": "OWN",
+          "default_rate": 0.2098750743604997,
+          "n": 8405
+        },
+        {
+          "home_ownership": "RENT",
+          "default_rate": 0.21572408844239135,
+          "n": 44594
+        }
+      ]
+    },
+    "high_correlation_pairs": [
+      {
+        "feature_a": "loan_amnt",
+        "feature_b": "funded_amnt",
+        "correlation": 0.997
+      },
+      {
+        "feature_a": "loan_amnt",
+        "feature_b": "funded_amnt_inv",
+        "correlation": 0.987
+      },
+      {
+        "feature_a": "loan_amnt",
+        "feature_b": "installment",
+        "correlation": 0.957
+      },
+      {
+        "feature_a": "funded_amnt",
+        "feature_b": "funded_amnt_inv",
+        "correlation": 0.99
+      },
+      {
+        "feature_a": "funded_amnt",
+        "feature_b": "installment",
+        "correlation": 0.961
+      },
+      {
+        "feature_a": "funded_amnt_inv",
+        "feature_b": "installment",
+        "correlation": 0.95
+      },
+      {
+        "feature_a": "mths_since_last_delinq",
+        "feature_b": "mths_since_last_delinq_filled",
+        "correlation": 1.0
+      },
+      {
+        "feature_a": "mths_since_last_record",
+        "feature_b": "pub_rec",
+        "correlation": 0.854
+      },
+      {
+        "feature_a": "mths_since_last_record",
+        "feature_b": "has_pub_rec",
+        "correlation": 0.968
+      },
+      {
+        "feature_a": "pub_rec",
+        "feature_b": "has_pub_rec",
+        "correlation": 0.882
+      },
+      {
+        "feature_a": "revol_util",
+        "feature_b": "revol_util_clean",
+        "correlation": 1.0
+      },
+      {
+        "feature_a": "tot_coll_amt",
+        "feature_b": "tot_cur_bal",
+        "correlation": 0.973
+      },
+      {
+        "feature_a": "tot_coll_amt",
+        "feature_b": "total_rev_hi_lim",
+        "correlation": 0.997
+      },
+      {
+        "feature_a": "tot_cur_bal",
+        "feature_b": "total_rev_hi_lim",
+        "correlation": 0.978
+      },
+      {
+        "feature_a": "grade_ordinal",
+        "feature_b": "subgrade_ordinal",
+        "correlation": 0.978
+      },
+      {
+        "feature_a": "grade_ordinal",
+        "feature_b": "int_rate_clean",
+        "correlation": 0.941
+      },
+      {
+        "feature_a": "subgrade_ordinal",
+        "feature_b": "int_rate_clean",
+        "correlation": 0.962
+      },
+      {
+        "feature_a": "payment_to_income",
+        "feature_b": "loan_to_income",
+        "correlation": 0.951
+      }
+    ],
+    "portfolio_drivers": {
+      "int_rate_clean": {
+        "mean_abs_shap": 0.47992,
+        "pct_increasing_risk": 47.0,
+        "pct_decreasing_risk": 52.9
+      },
+      "loan_to_income": {
+        "mean_abs_shap": 0.16176,
+        "pct_increasing_risk": 31.9,
+        "pct_decreasing_risk": 68.0
+      },
+      "annual_inc": {
+        "mean_abs_shap": 0.13677,
+        "pct_increasing_risk": 47.2,
+        "pct_decreasing_risk": 52.8
+      },
+      "dti": {
+        "mean_abs_shap": 0.11174,
+        "pct_increasing_risk": 42.2,
+        "pct_decreasing_risk": 57.8
+      },
+      "tot_cur_bal": {
+        "mean_abs_shap": 0.06272,
+        "pct_increasing_risk": 50.8,
+        "pct_decreasing_risk": 49.2
+      }
+    }
+  },
+  "missing_summary": {
+    "loan_amnt": {
+      "n_missing": 0,
+      "pct_missing": 0.0
+    },
+    "funded_amnt": {
+      "n_missing": 0,
+      "pct_missing": 0.0
+    },
+    "funded_amnt_inv": {
+      "n_missing": 0,
+      "pct_missing": 0.0
+    },
+    "int_rate": {
+      "n_missing": 0,
+      "pct_missing": 0.0
+    },
+    "installment": {
+      "n_missing": 0,
+      "pct_missing": 0.0
+    },
+    "annual_inc": {
+      "n_missing": 1,
+      "pct_missing": 0.0
+    },
+    "dti": {
+      "n_missing": 0,
+      "pct_missing": 0.0
+    },
+    "delinq_2yrs": {
+      "n_missing": 21,
+      "pct_missing": 0.0002
+    },
+    "inq_last_6mths": {
+      "n_missing": 21,
+      "pct_missing": 0.0002
+    },
+    "mths_since_last_record": {
+      "n_missing": 90552,
+      "pct_missing": 0.8693
+    },
+    "open_acc": {
+      "n_missing": 21,
+      "pct_missing": 0.0002
+    },
+    "pub_rec": {
+      "n_missing": 21,
+      "pct_missing": 0.0002
+    },
+    "revol_bal": {
+      "n_missing": 0,
+      "pct_missing": 0.0
+    },
+    "revol_util": {
+      "n_missing": 115,
+      "pct_missing": 0.0011
+    },
+    "total_acc": {
+      "n_missing": 21,
+      "pct_missing": 0.0002
+    },
+    "tot_coll_amt": {
+      "n_missing": 34477,
+      "pct_missing": 0.331
+    },
+    "tot_cur_bal": {
+      "n_missing": 34477,
+      "pct_missing": 0.331
+    },
+    "total_rev_hi_lim": {
+      "n_missing": 34477,
+      "pct_missing": 0.331
+    },
+    "term": {
+      "n_missing": 0,
+      "pct_missing": 0.0
+    },
+    "grade": {
+      "n_missing": 0,
+      "pct_missing": 0.0
+    },
+    "sub_grade": {
+      "n_missing": 0,
+      "pct_missing": 0.0
+    },
+    "emp_length": {
+      "n_missing": 3917,
+      "pct_missing": 0.0376
+    },
+    "home_ownership": {
+      "n_missing": 0,
+      "pct_missing": 0.0
+    },
+    "verification_status": {
+      "n_missing": 0,
+      "pct_missing": 0.0
+    },
+    "purpose": {
+      "n_missing": 0,
+      "pct_missing": 0.0
+    },
+    "addr_state": {
+      "n_missing": 0,
+      "pct_missing": 0.0
+    },
+    "initial_list_status": {
+      "n_missing": 0,
+      "pct_missing": 0.0
+    },
+    "collections_12_mths_ex_med": {
+      "n_missing": 24,
+      "pct_missing": 0.0002
+    },
+    "annual_inc_joint": {
+      "n_missing": 104164,
+      "pct_missing": 1.0
+    },
+    "dti_joint": {
+      "n_missing": 104164,
+      "pct_missing": 1.0
+    },
+    "verification_status_joint": {
+      "n_missing": 104164,
+      "pct_missing": 1.0
+    },
+    "open_acc_6m": {
+      "n_missing": 104164,
+      "pct_missing": 1.0
+    },
+    "open_il_6m": {
+      "n_missing": 104164,
+      "pct_missing": 1.0
+    },
+    "open_il_12m": {
+      "n_missing": 104164,
+      "pct_missing": 1.0
+    },
+    "open_il_24m": {
+      "n_missing": 104164,
+      "pct_missing": 1.0
+    },
+    "mths_since_rcnt_il": {
+      "n_missing": 104164,
+      "pct_missing": 1.0
+    },
+    "total_bal_il": {
+      "n_missing": 104164,
+      "pct_missing": 1.0
+    },
+    "il_util": {
+      "n_missing": 104164,
+      "pct_missing": 1.0
+    },
+    "open_rv_12m": {
+      "n_missing": 104164,
+      "pct_missing": 1.0
+    },
+    "open_rv_24m": {
+      "n_missing": 104164,
+      "pct_missing": 1.0
+    },
+    "max_bal_bc": {
+      "n_missing": 104164,
+      "pct_missing": 1.0
+    },
+    "all_util": {
+      "n_missing": 104164,
+      "pct_missing": 1.0
+    },
+    "inq_fi": {
+      "n_missing": 104164,
+      "pct_missing": 1.0
+    },
+    "total_cu_tl": {
+      "n_missing": 104164,
+      "pct_missing": 1.0
+    },
+    "inq_last_12m": {
+      "n_missing": 104164,
+      "pct_missing": 1.0
+    },
+    "issue_d": {
+      "n_missing": 0,
+      "pct_missing": 0.0
+    },
+    "earliest_cr_line": {
+      "n_missing": 21,
+      "pct_missing": 0.0002
+    },
+    "mths_since_last_delinq": {
+      "n_missing": 60070,
+      "pct_missing": 0.5767
+    },
+    "mths_since_last_major_derog": {
+      "n_missing": 86894,
+      "pct_missing": 0.8342
+    },
+    "acc_now_delinq": {
+      "n_missing": 21,
+      "pct_missing": 0.0002
+    }
+  },
+  "outlier_summary": {
+    "loan_amnt": {
+      "iqr_outliers": 0,
+      "zscore_outliers": 0,
+      "p1": 1600.0,
+      "p99": 35000.0,
+      "min": 500.0,
+      "max": 35000.0
+    },
+    "funded_amnt": {
+      "iqr_outliers": 0,
+      "zscore_outliers": 0,
+      "p1": 1600.0,
+      "p99": 35000.0,
+      "min": 500.0,
+      "max": 35000.0
+    },
+    "funded_amnt_inv": {
+      "iqr_outliers": 0,
+      "zscore_outliers": 0,
+      "p1": 1200.0,
+      "p99": 35000.0,
+      "min": 0.0,
+      "max": 35000.0
+    },
+    "int_rate": {
+      "iqr_outliers": 0,
+      "zscore_outliers": 0,
+      "p1": 6.03,
+      "p99": 24.08,
+      "min": 5.42,
+      "max": 26.06
+    },
+    "installment": {
+      "iqr_outliers": 0,
+      "zscore_outliers": 2,
+      "p1": 53.0626,
+      "p99": 1190.28,
+      "min": 15.67,
+      "max": 1408.13
+    },
+    "annual_inc": {
+      "iqr_outliers": 1391,
+      "zscore_outliers": 514,
+      "p1": 18000.0,
+      "p99": 234000.0,
+      "min": 3000.0,
+      "max": 6100000.0
+    },
+    "dti": {
+      "iqr_outliers": 0,
+      "zscore_outliers": 0,
+      "p1": 1.1,
+      "p99": 33.08,
+      "min": 0.0,
+      "max": 34.99
+    },
+    "delinq_2yrs": {
+      "iqr_outliers": 15762,
+      "zscore_outliers": 799,
+      "p1": 0.0,
+      "p99": 3.0,
+      "min": 0.0,
+      "max": 29.0
+    },
+    "inq_last_6mths": {
+      "iqr_outliers": 1417,
+      "zscore_outliers": 588,
+      "p1": 0.0,
+      "p99": 5.0,
+      "min": 0.0,
+      "max": 33.0
+    },
+    "mths_since_last_record": {
+      "iqr_outliers": 0,
+      "zscore_outliers": 0,
+      "p1": 0.0,
+      "p99": 118.0,
+      "min": 0.0,
+      "max": 129.0
+    },
+    "open_acc": {
+      "iqr_outliers": 230,
+      "zscore_outliers": 279,
+      "p1": 3.0,
+      "p99": 25.0,
+      "min": 0.0,
+      "max": 52.0
+    },
+    "pub_rec": {
+      "iqr_outliers": 12863,
+      "zscore_outliers": 1400,
+      "p1": 0.0,
+      "p99": 2.0,
+      "min": 0.0,
+      "max": 11.0
+    },
+    "revol_bal": {
+      "iqr_outliers": 1911,
+      "zscore_outliers": 768,
+      "p1": 44.0,
+      "p99": 78497.14,
+      "min": 0.0,
+      "max": 1743266.0
+    },
+    "revol_util": {
+      "iqr_outliers": 1,
+      "zscore_outliers": 1,
+      "p1": 0.4,
+      "p99": 97.5,
+      "min": 0.0,
+      "max": 892.3
+    },
+    "total_acc": {
+      "iqr_outliers": 9,
+      "zscore_outliers": 34,
+      "p1": 5.0,
+      "p99": 59.0,
+      "min": 1.0,
+      "max": 91.0
+    },
+    "tot_coll_amt": {
+      "iqr_outliers": 8230,
+      "zscore_outliers": 1,
+      "p1": 0.0,
+      "p99": 3130.14,
+      "min": 0.0,
+      "max": 9152545.0
+    },
+    "tot_cur_bal": {
+      "iqr_outliers": 346,
+      "zscore_outliers": 373,
+      "p1": 3318.86,
+      "p99": 638430.1,
+      "min": 0.0,
+      "max": 4772549.0
+    },
+    "total_rev_hi_lim": {
+      "iqr_outliers": 1268,
+      "zscore_outliers": 547,
+      "p1": 3000.0,
+      "p99": 129939.8,
+      "min": 0.0,
+      "max": 2013133.0
+    }
+  },
+  "feature_log": [
+    {
+      "feature": "credit_age_months",
+      "source": "earliest_cr_line",
+      "rationale": "Credit history length \u2014 longer history generally predicts lower default"
+    },
+    {
+      "feature": "loan_age_months",
+      "source": "issue_d",
+      "rationale": "Loan vintage \u2014 controls for origination cohort effects"
+    },
+    {
+      "feature": "grade_ordinal",
+      "source": "grade",
+      "rationale": "LC-assigned credit grade \u2014 strong proxy for creditworthiness (1=best)"
+    },
+    {
+      "feature": "subgrade_ordinal",
+      "source": "sub_grade",
+      "rationale": "Finer-grained credit grade \u2014 captures risk within a grade bucket"
+    },
+    {
+      "feature": "int_rate_clean",
+      "source": "int_rate",
+      "rationale": "Interest rate \u2014 higher rates indicate riskier borrowers"
+    },
+    {
+      "feature": "term_60",
+      "source": "term",
+      "rationale": "60-month flag \u2014 longer term loans have higher cumulative default probability"
+    },
+    {
+      "feature": "payment_to_income",
+      "source": "installment + annual_inc",
+      "rationale": "Monthly payment burden as share of income \u2014 affordability indicator"
+    },
+    {
+      "feature": "loan_to_income",
+      "source": "loan_amnt + annual_inc",
+      "rationale": "Loan-to-income ratio \u2014 key affordability measure for unsecured lending"
+    },
+    {
+      "feature": "emp_length_clean",
+      "source": "emp_length",
+      "rationale": "Employment stability \u2014 longer tenure predicts lower default; -1 = unknown"
+    },
+    {
+      "feature": "has_mortgage / is_renter",
+      "source": "home_ownership",
+      "rationale": "Housing tenure flags \u2014 mortgage holders tend to be lower risk"
+    },
+    {
+      "feature": "any_delinq_2yr",
+      "source": "delinq_2yrs",
+      "rationale": "Any 30+ dpd in last 2 years \u2014 strong default predictor"
+    },
+    {
+      "feature": "delinq_recent",
+      "source": "mths_since_last_delinq",
+      "rationale": "Delinquency within last 12 months \u2014 recency amplifies risk signal"
+    },
+    {
+      "feature": "has_pub_rec",
+      "source": "pub_rec",
+      "rationale": "Any derogatory public record \u2014 bankruptcy or collection flag"
+    },
+    {
+      "feature": "high_inquiries",
+      "source": "inq_last_6mths",
+      "rationale": "High inquiry count signals credit-seeking behaviour / financial stress"
+    },
+    {
+      "feature": "revol_util_clean / high_revol_util",
+      "source": "revol_util",
+      "rationale": "Revolving utilisation \u2014 >75% signals credit stress"
+    },
+    {
+      "feature": "open_acc_ratio",
+      "source": "open_acc + total_acc",
+      "rationale": "Proportion of accounts still open \u2014 portfolio activity indicator"
+    }
+  ],
+  "woe_bins": {
+    "loan_amnt": {
+      "(499.999, 4800.0]": 0.185,
+      "(4800.0, 6400.0]": 0.2119,
+      "(6400.0, 8000.0]": 0.1656,
+      "(8000.0, 10000.0]": 0.0713,
+      "(10000.0, 12000.0]": 0.0599,
+      "(12000.0, 14400.0]": 0.0206,
+      "(14400.0, 16500.0]": -0.0753,
+      "(16500.0, 20000.0]": -0.1238,
+      "(20000.0, 25000.0]": -0.1682,
+      "(25000.0, 35000.0]": -0.3214
+    },
+    "funded_amnt": {
+      "(499.999, 4800.0]": 0.1794,
+      "(4800.0, 6350.0]": 0.2018,
+      "(6350.0, 8000.0]": 0.1763,
+      "(8000.0, 10000.0]": 0.0756,
+      "(10000.0, 12000.0]": 0.0535,
+      "(12000.0, 14250.0]": 0.0269,
+      "(14250.0, 16400.0]": -0.0538,
+      "(16400.0, 20000.0]": -0.1385,
+      "(20000.0, 25000.0]": -0.1716,
+      "(25000.0, 35000.0]": -0.3171
+    },
+    "funded_amnt_inv": {
+      "(-0.001, 4375.0]": 0.1149,
+      "(4375.0, 6000.0]": 0.2291,
+      "(6000.0, 8000.0]": 0.1578,
+      "(8000.0, 10000.0]": 0.0783,
+      "(10000.0, 11950.0]": -0.0672,
+      "(11950.0, 14000.0]": 0.1289,
+      "(14000.0, 16000.0]": -0.0489,
+      "(16000.0, 20000.0]": -0.1481,
+      "(20000.0, 25000.0]": -0.1585,
+      "(25000.0, 35000.0]": -0.3113
+    },
+    "installment": {
+      "(15.669, 152.98]": 0.2065,
+      "(152.98, 209.82]": 0.2279,
+      "(209.82, 270.245]": 0.1403,
+      "(270.245, 323.43]": 0.038,
+      "(323.43, 368.45]": -0.0452,
+      "(368.45, 432.43]": -0.0106,
+      "(432.43, 506.21]": -0.0652,
+      "(506.21, 607.45]": -0.26,
+      "(607.45, 757.361]": -0.0155,
+      "(757.361, 1408.13]": -0.1547
+    },
+    "annual_inc": {
+      "(2999.999, 33000.0]": -0.3464,
+      "(33000.0, 40800.0]": -0.3008,
+      "(40800.0, 48000.0]": -0.1347,
+      "(48000.0, 55000.0]": -0.1064,
+      "(55000.0, 62000.0]": -0.0946,
+      "(62000.0, 70000.0]": 0.0534,
+      "(70000.0, 80000.0]": 0.1076,
+      "(80000.0, 95000.0]": 0.2895,
+      "(95000.0, 120000.0]": 0.3245,
+      "(120000.0, 6100000.0]": 0.4293
+    },
+    "dti": {
+      "(-0.001, 6.25]": 0.4317,
+      "(6.25, 9.29]": 0.3733,
+      "(9.29, 11.67]": 0.195,
+      "(11.67, 13.8]": 0.1886,
+      "(13.8, 15.86]": 0.1112,
+      "(15.86, 17.95]": 0.0116,
+      "(17.95, 20.19]": -0.0596,
+      "(20.19, 22.73]": -0.1738,
+      "(22.73, 26.14]": -0.2893,
+      "(26.14, 34.99]": -0.5428
+    },
+    "delinq_2yrs": {
+      "(-0.001, 1.0]": 0.0094,
+      "(1.0, 29.0]": -0.1834
+    },
+    "inq_last_6mths": {
+      "(-0.001, 1.0]": 0.0724,
+      "(1.0, 2.0]": -0.1371,
+      "(2.0, 33.0]": -0.3084
+    },
+    "mths_since_last_delinq": {
+      "(-999999.001, 5.0]": 0.0161,
+      "(5.0, 19.0]": -0.1296,
+      "(19.0, 34.0]": 0.0058,
+      "(34.0, 52.0]": 0.0118,
+      "(52.0, 151.0]": 0.0265
+    },
+    "mths_since_last_record": {
+      "(-999999.001, 51.0]": 0.0114,
+      "(51.0, 129.0]": -0.1006
+    },
+    "open_acc": {
+      "(-0.001, 5.0]": 0.0852,
+      "(5.0, 7.0]": 0.0531,
+      "(7.0, 8.0]": 0.0116,
+      "(8.0, 9.0]": 0.0259,
+      "(9.0, 10.0]": -0.0149,
+      "(10.0, 11.0]": -0.0597,
+      "(11.0, 13.0]": -0.0324,
+      "(13.0, 14.0]": -0.0291,
+      "(14.0, 17.0]": -0.0258,
+      "(17.0, 52.0]": -0.0587
+    },
+    "pub_rec": {
+      "(-0.001, 1.0]": 0.0021,
+      "(1.0, 11.0]": -0.1451
+    },
+    "revol_bal": {
+      "(-0.001, 2838.0]": 0.1935,
+      "(2838.0, 4938.0]": 0.041,
+      "(4938.0, 6809.0]": 0.0419,
+      "(6809.0, 8764.0]": -0.0548,
+      "(8764.0, 10962.5]": -0.0309,
+      "(10962.5, 13611.8]": -0.0693,
+      "(13611.8, 16964.0]": -0.058,
+      "(16964.0, 21769.4]": -0.0689,
+      "(21769.4, 30203.0]": -0.0367,
+      "(30203.0, 1743266.0]": 0.0611
+    },
+    "revol_util": {
+      "(-999998.001, 19.4]": 0.5569,
+      "(19.4, 32.2]": 0.3229,
+      "(32.2, 41.6]": 0.1475,
+      "(41.6, 49.6]": 0.0786,
+      "(49.6, 56.8]": -0.0327,
+      "(56.8, 63.9]": -0.0634,
+      "(63.9, 70.8]": -0.1069,
+      "(70.8, 78.4]": -0.1592,
+      "(78.4, 87.2]": -0.2159,
+      "(87.2, 892.3]": -0.3406
+    },
+    "total_acc": {
+      "(0.999, 11.0]": -0.102,
+      "(11.0, 15.0]": -0.0999,
+      "(15.0, 18.0]": -0.0343,
+      "(18.0, 20.0]": -0.0545,
+      "(20.0, 23.0]": -0.0101,
+      "(23.0, 26.0]": 0.0042,
+      "(26.0, 30.0]": 0.0403,
+      "(30.0, 34.0]": 0.0618,
+      "(34.0, 41.0]": 0.1418,
+      "(41.0, 91.0]": 0.1015
+    },
+    "collections_12_mths_ex_med": {
+      "(-0.001, 5.0]": 0.0
+    },
+    "mths_since_last_major_derog": {
+      "(-999999.001, 36.0]": 0.01,
+      "(36.0, 151.0]": -0.0894
+    },
+    "acc_now_delinq": {
+      "(-0.001, 4.0]": 0.0
+    },
+    "tot_coll_amt": {
+      "(-999999.001, 0.0]": 0.0156,
+      "(0.0, 9152545.0]": -0.1721
+    },
+    "tot_cur_bal": {
+      "(-999999.001, 14028.0]": 0.139,
+      "(14028.0, 28536.5]": -0.3073,
+      "(28536.5, 50141.2]": -0.2603,
+      "(50141.2, 109391.0]": -0.2505,
+      "(109391.0, 184076.4]": -0.0671,
+      "(184076.4, 278535.3]": 0.0938,
+      "(278535.3, 4772549.0]": 0.3725
+    },
+    "total_rev_hi_lim": {
+      "(-999999.001, 8300.0]": 0.1292,
+      "(8300.0, 13300.0]": -0.2089,
+      "(13300.0, 18300.0]": -0.1575,
+      "(18300.0, 24300.0]": -0.1995,
+      "(24300.0, 32700.0]": -0.1103,
+      "(32700.0, 47200.0]": -0.0082,
+      "(47200.0, 2013133.0]": 0.237
+    },
+    "credit_age_months": {
+      "(-999999.001, 185.0]": -0.0983,
+      "(185.0, 201.0]": -0.0087,
+      "(201.0, 220.0]": 0.0033,
+      "(220.0, 244.0]": 0.0645,
+      "(244.0, 274.0]": 0.1485,
+      "(274.0, 328.0]": 0.1143,
+      "(328.0, 564.0]": 0.1016
+    },
+    "grade_ordinal": {
+      "(0.999, 2.0]": 0.6455,
+      "(2.0, 3.0]": -0.1352,
+      "(3.0, 4.0]": -0.4843,
+      "(4.0, 5.0]": -0.8296,
+      "(5.0, 7.0]": -1.1125
+    },
+    "subgrade_ordinal": {
+      "(0.999, 4.0]": 1.3721,
+      "(4.0, 6.0]": 0.7535,
+      "(6.0, 8.0]": 0.5009,
+      "(8.0, 9.0]": 0.3213,
+      "(9.0, 11.0]": 0.1215,
+      "(11.0, 13.0]": -0.1135,
+      "(13.0, 15.0]": -0.2721,
+      "(15.0, 17.0]": -0.4112,
+      "(17.0, 21.0]": -0.5815,
+      "(21.0, 35.0]": -0.9594
+    },
+    "int_rate_clean": {
+      "(5.419, 7.9]": 1.3684,
+      "(7.9, 9.91]": 0.7654,
+      "(9.91, 11.14]": 0.5704,
+      "(11.14, 12.53]": 0.3544,
+      "(12.53, 13.65]": 0.1595,
+      "(13.65, 14.59]": 0.013,
+      "(14.59, 15.8]": -0.1956,
+      "(15.8, 17.57]": -0.4177,
+      "(17.57, 19.47]": -0.5698,
+      "(19.47, 26.06]": -0.9799
+    },
+    "term_60": {
+      "(-0.001, 1.0]": 0.0
+    },
+    "payment_to_income": {
+      "(-0.0006640000000000001, 0.0296]": 0.5619,
+      "(0.0296, 0.042]": 0.3554,
+      "(0.042, 0.0526]": 0.3577,
+      "(0.0526, 0.0629]": 0.2409,
+      "(0.0629, 0.0733]": 0.1798,
+      "(0.0733, 0.0843]": 0.0134,
+      "(0.0843, 0.0977]": -0.0703,
+      "(0.0977, 0.114]": -0.222,
+      "(0.114, 0.136]": -0.4982,
+      "(0.136, 0.32]": -0.5428
+    },
+    "loan_to_income": {
+      "(-0.00016700000000000005, 0.0765]": 0.5321,
+      "(0.0765, 0.109]": 0.3887,
+      "(0.109, 0.139]": 0.3681,
+      "(0.139, 0.167]": 0.267,
+      "(0.167, 0.196]": 0.2562,
+      "(0.196, 0.226]": 0.0758,
+      "(0.226, 0.262]": -0.0362,
+      "(0.262, 0.307]": -0.2373,
+      "(0.307, 0.366]": -0.4976,
+      "(0.366, 0.83]": -0.6771
+    },
+    "emp_length_clean": {
+      "(-1.001, 0.9]": -0.1371,
+      "(0.9, 2.0]": 0.0715,
+      "(2.0, 3.0]": 0.0315,
+      "(3.0, 4.0]": 0.1022,
+      "(4.0, 5.0]": 0.0075,
+      "(5.0, 7.0]": -0.03,
+      "(7.0, 9.0]": -0.0626,
+      "(9.0, 10.0]": 0.0177
+    },
+    "has_mortgage": {
+      "(-0.001, 1.0]": 0.0
+    },
+    "is_renter": {
+      "(-0.001, 1.0]": 0.0
+    },
+    "any_delinq_2yr": {
+      "(-0.001, 1.0]": 0.0
+    },
+    "delinq_recent": {
+      "(-0.001, 1.0]": 0.0
+    },
+    "mths_since_last_delinq_filled": {
+      "(-0.001, 16.0]": -0.1632,
+      "(16.0, 30.0]": -0.0273,
+      "(30.0, 47.0]": 0.041,
+      "(47.0, 74.0]": -0.009,
+      "(74.0, 999.0]": 0.0297
+    },
+    "has_pub_rec": {
+      "(-0.001, 1.0]": 0.0
+    },
+    "high_inquiries": {
+      "(-0.001, 1.0]": 0.0
+    },
+    "revol_util_clean": {
+      "(-999998.001, 19.4]": 0.5569,
+      "(19.4, 32.2]": 0.3229,
+      "(32.2, 41.6]": 0.1475,
+      "(41.6, 49.6]": 0.0786,
+      "(49.6, 56.8]": -0.0327,
+      "(56.8, 63.9]": -0.0634,
+      "(63.9, 70.8]": -0.1069,
+      "(70.8, 78.4]": -0.1592,
+      "(78.4, 87.2]": -0.2159,
+      "(87.2, 892.3]": -0.3406
+    },
+    "high_revol_util": {
+      "(-0.001, 1.0]": 0.0
+    },
+    "open_acc_ratio": {
+      "(-999998.001, 0.259]": 0.2531,
+      "(0.259, 0.312]": 0.1767,
+      "(0.312, 0.357]": 0.1391,
+      "(0.357, 0.4]": 0.0469,
+      "(0.4, 0.436]": 0.0066,
+      "(0.436, 0.476]": -0.0114,
+      "(0.476, 0.526]": -0.0412,
+      "(0.526, 0.583]": -0.1071,
+      "(0.583, 0.667]": -0.1476,
+      "(0.667, 0.958]": -0.2733
+    },
+    "verification_ordinal": {
+      "(-0.001, 1.0]": 0.1151,
+      "(1.0, 2.0]": -0.179
+    },
+    "purpose_credit_card": {
+      "False": -0.0432,
+      "True": 0.1779
+    },
+    "purpose_debt_consolidation": {
+      "False": 0.0912,
+      "True": -0.0658
+    },
+    "purpose_home_improvement": {
+      "False": -0.0121,
+      "True": 0.1963
+    },
+    "purpose_major_purchase": {
+      "False": -0.0081,
+      "True": 0.3314
+    },
+    "purpose_medical": {
+      "False": 0.001,
+      "True": -0.0828
+    },
+    "purpose_other": {
+      "False": 0.0093,
+      "True": -0.0943
+    },
+    "purpose_small_business": {
+      "False": 0.0139,
+      "True": -0.547
+    },
+    "initial_list_w": {
+      "(-0.001, 1.0]": 0.0
+    },
+    "state_default_rate": {
+      "(-0.001, 0.169]": 0.2206,
+      "(0.169, 0.185]": 0.102,
+      "(0.185, 0.186]": 0.0678,
+      "(0.186, 0.187]": 0.0576,
+      "(0.187, 0.189]": 0.0507,
+      "(0.189, 0.204]": 0.0119,
+      "(0.204, 0.209]": -0.0738,
+      "(0.209, 0.211]": -0.0873,
+      "(0.211, 0.219]": -0.1358,
+      "(0.219, 0.667]": -0.2285
+    }
+  },
+  "imputation_log": [
+    {
+      "Column": "emp_length",
+      "Strategy": "Median",
+      "Value": 6.0,
+      "Missing%": 3.8,
+      "Reason": "Median imputation (low missing %, standard numeric)"
+    },
+    {
+      "Column": "annual_inc",
+      "Strategy": "Median",
+      "Value": 62000.0,
+      "Missing%": 0.0,
+      "Reason": "Median imputation (low missing %, standard numeric)"
+    },
+    {
+      "Column": "delinq_2yrs",
+      "Strategy": "Median",
+      "Value": 0.0,
+      "Missing%": 0.0,
+      "Reason": "Median imputation (low missing %, standard numeric)"
+    },
+    {
+      "Column": "earliest_cr_line",
+      "Strategy": "Mode",
+      "Value": "Oct-00",
+      "Missing%": 0.0,
+      "Reason": "Most frequent category"
+    },
+    {
+      "Column": "inq_last_6mths",
+      "Strategy": "Median",
+      "Value": 1.0,
+      "Missing%": 0.0,
+      "Reason": "Median imputation (low missing %, standard numeric)"
+    },
+    {
+      "Column": "mths_since_last_delinq",
+      "Strategy": "Sentinel (-999999)",
+      "Value": -999999,
+      "Missing%": 57.7,
+      "Reason": "Missing source data (>20% missing in original variable)"
+    },
+    {
+      "Column": "mths_since_last_record",
+      "Strategy": "Sentinel (-999999)",
+      "Value": -999999,
+      "Missing%": 86.9,
+      "Reason": "Missing source data (>20% missing in original variable)"
+    },
+    {
+      "Column": "open_acc",
+      "Strategy": "Median",
+      "Value": 10.0,
+      "Missing%": 0.0,
+      "Reason": "Median imputation (low missing %, standard numeric)"
+    },
+    {
+      "Column": "pub_rec",
+      "Strategy": "Median",
+      "Value": 0.0,
+      "Missing%": 0.0,
+      "Reason": "Median imputation (low missing %, standard numeric)"
+    },
+    {
+      "Column": "revol_util",
+      "Strategy": "Sentinel (-999998)",
+      "Value": -999998,
+      "Missing%": 0.1,
+      "Reason": "Invalid ratio (division by zero)"
+    },
+    {
+      "Column": "total_acc",
+      "Strategy": "Median",
+      "Value": 23.0,
+      "Missing%": 0.0,
+      "Reason": "Median imputation (low missing %, standard numeric)"
+    },
+    {
+      "Column": "collections_12_mths_ex_med",
+      "Strategy": "Median",
+      "Value": 0.0,
+      "Missing%": 0.0,
+      "Reason": "Median imputation (low missing %, standard numeric)"
+    },
+    {
+      "Column": "mths_since_last_major_derog",
+      "Strategy": "Sentinel (-999999)",
+      "Value": -999999,
+      "Missing%": 83.4,
+      "Reason": "Missing source data (>20% missing in original variable)"
+    },
+    {
+      "Column": "annual_inc_joint",
+      "Strategy": "Mode",
+      "Value": "unknown",
+      "Missing%": 100.0,
+      "Reason": "Most frequent category"
+    },
+    {
+      "Column": "dti_joint",
+      "Strategy": "Mode",
+      "Value": "unknown",
+      "Missing%": 100.0,
+      "Reason": "Most frequent category"
+    },
+    {
+      "Column": "verification_status_joint",
+      "Strategy": "Mode",
+      "Value": "unknown",
+      "Missing%": 100.0,
+      "Reason": "Most frequent category"
+    },
+    {
+      "Column": "acc_now_delinq",
+      "Strategy": "Median",
+      "Value": 0.0,
+      "Missing%": 0.0,
+      "Reason": "Median imputation (low missing %, standard numeric)"
+    },
+    {
+      "Column": "tot_coll_amt",
+      "Strategy": "Sentinel (-999999)",
+      "Value": -999999,
+      "Missing%": 33.1,
+      "Reason": "Missing source data (>20% missing in original variable)"
+    },
+    {
+      "Column": "tot_cur_bal",
+      "Strategy": "Sentinel (-999999)",
+      "Value": -999999,
+      "Missing%": 33.1,
+      "Reason": "Missing source data (>20% missing in original variable)"
+    },
+    {
+      "Column": "open_acc_6m",
+      "Strategy": "Mode",
+      "Value": "unknown",
+      "Missing%": 100.0,
+      "Reason": "Most frequent category"
+    },
+    {
+      "Column": "open_il_6m",
+      "Strategy": "Mode",
+      "Value": "unknown",
+      "Missing%": 100.0,
+      "Reason": "Most frequent category"
+    },
+    {
+      "Column": "open_il_12m",
+      "Strategy": "Mode",
+      "Value": "unknown",
+      "Missing%": 100.0,
+      "Reason": "Most frequent category"
+    },
+    {
+      "Column": "open_il_24m",
+      "Strategy": "Mode",
+      "Value": "unknown",
+      "Missing%": 100.0,
+      "Reason": "Most frequent category"
+    },
+    {
+      "Column": "mths_since_rcnt_il",
+      "Strategy": "Mode",
+      "Value": "unknown",
+      "Missing%": 100.0,
+      "Reason": "Most frequent category"
+    },
+    {
+      "Column": "total_bal_il",
+      "Strategy": "Mode",
+      "Value": "unknown",
+      "Missing%": 100.0,
+      "Reason": "Most frequent category"
+    },
+    {
+      "Column": "il_util",
+      "Strategy": "Mode",
+      "Value": "unknown",
+      "Missing%": 100.0,
+      "Reason": "Most frequent category"
+    },
+    {
+      "Column": "open_rv_12m",
+      "Strategy": "Mode",
+      "Value": "unknown",
+      "Missing%": 100.0,
+      "Reason": "Most frequent category"
+    },
+    {
+      "Column": "open_rv_24m",
+      "Strategy": "Mode",
+      "Value": "unknown",
+      "Missing%": 100.0,
+      "Reason": "Most frequent category"
+    },
+    {
+      "Column": "max_bal_bc",
+      "Strategy": "Mode",
+      "Value": "unknown",
+      "Missing%": 100.0,
+      "Reason": "Most frequent category"
+    },
+    {
+      "Column": "all_util",
+      "Strategy": "Mode",
+      "Value": "unknown",
+      "Missing%": 100.0,
+      "Reason": "Most frequent category"
+    },
+    {
+      "Column": "total_rev_hi_lim",
+      "Strategy": "Sentinel (-999999)",
+      "Value": -999999,
+      "Missing%": 33.1,
+      "Reason": "Missing source data (>20% missing in original variable)"
+    },
+    {
+      "Column": "inq_fi",
+      "Strategy": "Mode",
+      "Value": "unknown",
+      "Missing%": 100.0,
+      "Reason": "Most frequent category"
+    },
+    {
+      "Column": "total_cu_tl",
+      "Strategy": "Mode",
+      "Value": "unknown",
+      "Missing%": 100.0,
+      "Reason": "Most frequent category"
+    },
+    {
+      "Column": "inq_last_12m",
+      "Strategy": "Mode",
+      "Value": "unknown",
+      "Missing%": 100.0,
+      "Reason": "Most frequent category"
+    },
+    {
+      "Column": "credit_age_months",
+      "Strategy": "Sentinel (-999999)",
+      "Value": -999999,
+      "Missing%": 36.0,
+      "Reason": "Missing source data (>20% missing in original variable)"
+    },
+    {
+      "Column": "loan_age_months",
+      "Strategy": "Mode",
+      "Value": "unknown",
+      "Missing%": 100.0,
+      "Reason": "Most frequent category"
+    },
+    {
+      "Column": "issue_year",
+      "Strategy": "Mode",
+      "Value": "unknown",
+      "Missing%": 100.0,
+      "Reason": "Most frequent category"
+    },
+    {
+      "Column": "issue_quarter",
+      "Strategy": "Mode",
+      "Value": "unknown",
+      "Missing%": 100.0,
+      "Reason": "Most frequent category"
+    },
+    {
+      "Column": "payment_to_income",
+      "Strategy": "Median",
+      "Value": 0.07,
+      "Missing%": 0.0,
+      "Reason": "Median imputation (low missing %, standard numeric)"
+    },
+    {
+      "Column": "loan_to_income",
+      "Strategy": "Median",
+      "Value": 0.2,
+      "Missing%": 0.0,
+      "Reason": "Median imputation (low missing %, standard numeric)"
+    },
+    {
+      "Column": "revol_util_clean",
+      "Strategy": "Sentinel (-999998)",
+      "Value": -999998,
+      "Missing%": 0.1,
+      "Reason": "Invalid ratio (division by zero)"
+    },
+    {
+      "Column": "open_acc_ratio",
+      "Strategy": "Sentinel (-999998)",
+      "Value": -999998,
+      "Missing%": 0.0,
+      "Reason": "Invalid ratio (division by zero)"
+    }
+  ],
+  "iv_table": [
+    {
+      "feature": "int_rate_clean",
+      "iv": 0.4014,
+      "strength": "Strong"
+    },
+    {
+      "feature": "subgrade_ordinal",
+      "iv": 0.3938,
+      "strength": "Strong"
+    },
+    {
+      "feature": "grade_ordinal",
+      "iv": 0.3276,
+      "strength": "Strong"
+    },
+    {
+      "feature": "loan_to_income",
+      "iv": 0.1522,
+      "strength": "Medium"
+    },
+    {
+      "feature": "payment_to_income",
+      "iv": 0.1262,
+      "strength": "Medium"
+    },
+    {
+      "feature": "dti",
+      "iv": 0.0837,
+      "strength": "Weak"
+    },
+    {
+      "feature": "annual_inc",
+      "iv": 0.0609,
+      "strength": "Weak"
+    },
+    {
+      "feature": "revol_util_clean",
+      "iv": 0.0601,
+      "strength": "Weak"
+    },
+    {
+      "feature": "revol_util",
+      "iv": 0.0601,
+      "strength": "Weak"
+    },
+    {
+      "feature": "tot_cur_bal",
+      "iv": 0.0454,
+      "strength": "Weak"
+    },
+    {
+      "feature": "loan_amnt",
+      "iv": 0.0264,
+      "strength": "Weak"
+    },
+    {
+      "feature": "funded_amnt",
+      "iv": 0.0262,
+      "strength": "Weak"
+    },
+    {
+      "feature": "funded_amnt_inv",
+      "iv": 0.0262,
+      "strength": "Weak"
+    },
+    {
+      "feature": "total_rev_hi_lim",
+      "iv": 0.0243,
+      "strength": "Weak"
+    },
+    {
+      "feature": "open_acc_ratio",
+      "iv": 0.0225,
+      "strength": "Weak"
+    },
+    {
+      "feature": "installment",
+      "iv": 0.0212,
+      "strength": "Weak"
+    },
+    {
+      "feature": "verification_ordinal",
+      "iv": 0.0206,
+      "strength": "Weak"
+    },
+    {
+      "feature": "inq_last_6mths",
+      "iv": 0.017,
+      "strength": "Useless"
+    },
+    {
+      "feature": "state_default_rate",
+      "iv": 0.0155,
+      "strength": "Useless"
+    },
+    {
+      "feature": "credit_age_months",
+      "iv": 0.0087,
+      "strength": "Useless"
+    },
+    {
+      "feature": "purpose_credit_card",
+      "iv": 0.0077,
+      "strength": "Useless"
+    },
+    {
+      "feature": "purpose_small_business",
+      "iv": 0.0076,
+      "strength": "Useless"
+    },
+    {
+      "feature": "revol_bal",
+      "iv": 0.0061,
+      "strength": "Useless"
+    },
+    {
+      "feature": "total_acc",
+      "iv": 0.0061,
+      "strength": "Useless"
+    },
+    {
+      "feature": "purpose_debt_consolidation",
+      "iv": 0.006,
+      "strength": "Useless"
+    },
+    {
+      "feature": "emp_length_clean",
+      "iv": 0.0044,
+      "strength": "Useless"
+    },
+    {
+      "feature": "mths_since_last_delinq_filled",
+      "iv": 0.0037,
+      "strength": "Useless"
+    },
+    {
+      "feature": "tot_coll_amt",
+      "iv": 0.0027,
+      "strength": "Useless"
+    },
+    {
+      "feature": "purpose_major_purchase",
+      "iv": 0.0027,
+      "strength": "Useless"
+    },
+    {
+      "feature": "purpose_home_improvement",
+      "iv": 0.0024,
+      "strength": "Useless"
+    },
+    {
+      "feature": "open_acc",
+      "iv": 0.0021,
+      "strength": "Useless"
+    },
+    {
+      "feature": "mths_since_last_delinq",
+      "iv": 0.002,
+      "strength": "Useless"
+    },
+    {
+      "feature": "delinq_2yrs",
+      "iv": 0.0017,
+      "strength": "Useless"
+    },
+    {
+      "feature": "mths_since_last_record",
+      "iv": 0.0012,
+      "strength": "Useless"
+    },
+    {
+      "feature": "purpose_other",
+      "iv": 0.0009,
+      "strength": "Useless"
+    },
+    {
+      "feature": "mths_since_last_major_derog",
+      "iv": 0.0009,
+      "strength": "Useless"
+    },
+    {
+      "feature": "pub_rec",
+      "iv": 0.0003,
+      "strength": "Useless"
+    },
+    {
+      "feature": "purpose_medical",
+      "iv": 0.0001,
+      "strength": "Useless"
+    },
+    {
+      "feature": "collections_12_mths_ex_med",
+      "iv": 0.0,
+      "strength": "Useless"
+    },
+    {
+      "feature": "term_60",
+      "iv": 0.0,
+      "strength": "Useless"
+    },
+    {
+      "feature": "acc_now_delinq",
+      "iv": 0.0,
+      "strength": "Useless"
+    },
+    {
+      "feature": "delinq_recent",
+      "iv": 0.0,
+      "strength": "Useless"
+    },
+    {
+      "feature": "any_delinq_2yr",
+      "iv": 0.0,
+      "strength": "Useless"
+    },
+    {
+      "feature": "is_renter",
+      "iv": 0.0,
+      "strength": "Useless"
+    },
+    {
+      "feature": "has_mortgage",
+      "iv": 0.0,
+      "strength": "Useless"
+    },
+    {
+      "feature": "high_revol_util",
+      "iv": 0.0,
+      "strength": "Useless"
+    },
+    {
+      "feature": "high_inquiries",
+      "iv": 0.0,
+      "strength": "Useless"
+    },
+    {
+      "feature": "has_pub_rec",
+      "iv": 0.0,
+      "strength": "Useless"
+    },
+    {
+      "feature": "initial_list_w",
+      "iv": 0.0,
+      "strength": "Useless"
+    }
+  ],
+  "selected_features": [
+    "int_rate_clean",
+    "loan_to_income",
+    "dti",
+    "annual_inc",
+    "revol_util",
+    "tot_cur_bal",
+    "loan_amnt",
+    "open_acc_ratio",
+    "verification_ordinal"
+  ],
+  "rejected_features": {
+    "inq_last_6mths": "IV too low (0.0170 < 0.02)",
+    "state_default_rate": "IV too low (0.0155 < 0.02)",
+    "credit_age_months": "IV too low (0.0087 < 0.02)",
+    "purpose_credit_card": "IV too low (0.0077 < 0.02)",
+    "purpose_small_business": "IV too low (0.0076 < 0.02)",
+    "revol_bal": "IV too low (0.0061 < 0.02)",
+    "total_acc": "IV too low (0.0061 < 0.02)",
+    "purpose_debt_consolidation": "IV too low (0.0060 < 0.02)",
+    "emp_length_clean": "IV too low (0.0044 < 0.02)",
+    "mths_since_last_delinq_filled": "IV too low (0.0037 < 0.02)",
+    "tot_coll_amt": "IV too low (0.0027 < 0.02)",
+    "purpose_major_purchase": "IV too low (0.0027 < 0.02)",
+    "purpose_home_improvement": "IV too low (0.0024 < 0.02)",
+    "open_acc": "IV too low (0.0021 < 0.02)",
+    "mths_since_last_delinq": "IV too low (0.0020 < 0.02)",
+    "delinq_2yrs": "IV too low (0.0017 < 0.02)",
+    "mths_since_last_record": "IV too low (0.0012 < 0.02)",
+    "purpose_other": "IV too low (0.0009 < 0.02)",
+    "mths_since_last_major_derog": "IV too low (0.0009 < 0.02)",
+    "pub_rec": "IV too low (0.0003 < 0.02)",
+    "purpose_medical": "IV too low (0.0001 < 0.02)",
+    "collections_12_mths_ex_med": "IV too low (0.0000 < 0.02)",
+    "term_60": "IV too low (0.0000 < 0.02)",
+    "acc_now_delinq": "IV too low (0.0000 < 0.02)",
+    "delinq_recent": "IV too low (0.0000 < 0.02)",
+    "any_delinq_2yr": "IV too low (0.0000 < 0.02)",
+    "is_renter": "IV too low (0.0000 < 0.02)",
+    "has_mortgage": "IV too low (0.0000 < 0.02)",
+    "high_revol_util": "IV too low (0.0000 < 0.02)",
+    "high_inquiries": "IV too low (0.0000 < 0.02)",
+    "has_pub_rec": "IV too low (0.0000 < 0.02)",
+    "initial_list_w": "IV too low (0.0000 < 0.02)",
+    "funded_amnt": "High correlation with counterpart (r=0.997) \u2014 lower IV removed",
+    "funded_amnt_inv": "High correlation with counterpart (r=0.987) \u2014 lower IV removed",
+    "installment": "High correlation with counterpart (r=0.957) \u2014 lower IV removed",
+    "revol_util_clean": "High correlation with counterpart (r=1.0) \u2014 lower IV removed",
+    "total_rev_hi_lim": "High correlation with counterpart (r=0.978) \u2014 lower IV removed",
+    "grade_ordinal": "High correlation with counterpart (r=0.978) \u2014 lower IV removed",
+    "subgrade_ordinal": "High correlation with counterpart (r=0.962) \u2014 lower IV removed",
+    "payment_to_income": "High correlation with counterpart (r=0.951) \u2014 lower IV removed"
+  },
+  "champion_model_name": "XGBoost",
+  "champion_model_path": "outputs/models/RUN_20260712_215141_champion_XGBoost.pkl",
+  "model_selection_rationale": "",
+  "model_metrics": {
+    "LogisticRegression": {
+      "model": "LogisticRegression",
+      "auc_train": 0.6941,
+      "auc_test": 0.7,
+      "gini": 0.4001,
+      "ks": 0.2912,
+      "precision": 0.3069,
+      "recall": 0.6315,
+      "f1": 0.413,
+      "overfit": -0.0059,
+      "best_params": {
+        "max_iter": 500,
+        "C": 0.1,
+        "class_weight": "balanced",
+        "random_state": 42
+      }
+    },
+    "RandomForest": {
+      "model": "RandomForest",
+      "auc_train": 0.7306,
+      "auc_test": 0.7038,
+      "gini": 0.4076,
+      "ks": 0.2988,
+      "precision": 0.3086,
+      "recall": 0.6459,
+      "f1": 0.4176,
+      "overfit": 0.0268,
+      "best_params": {
+        "n_estimators": 200,
+        "max_depth": 8,
+        "min_samples_leaf": 50,
+        "class_weight": "balanced",
+        "random_state": 42,
+        "n_jobs": -1
+      }
+    },
+    "XGBoost": {
+      "model": "XGBoost",
+      "auc_train": 0.7179,
+      "auc_test": 0.7058,
+      "gini": 0.4116,
+      "ks": 0.299,
+      "precision": 0.3065,
+      "recall": 0.6494,
+      "f1": 0.4165,
+      "overfit": 0.0121,
+      "best_params": {
+        "n_estimators": 433,
+        "max_depth": 4,
+        "learning_rate": 0.01855998084649059,
+        "subsample": 0.6733618039413735,
+        "colsample_bytree": 0.6521211214797689,
+        "min_child_weight": 29,
+        "scale_pos_weight": 4.146096162329069,
+        "random_state": 42,
+        "eval_metric": "auc"
+      }
+    },
+    "LightGBM": {
+      "model": "LightGBM",
+      "auc_train": 0.7269,
+      "auc_test": 0.7038,
+      "gini": 0.4076,
+      "ks": 0.2969,
+      "precision": 0.3088,
+      "recall": 0.6369,
+      "f1": 0.4159,
+      "overfit": 0.0231,
+      "best_params": {
+        "n_estimators": 100,
+        "max_depth": 5,
+        "learning_rate": 0.05,
+        "num_leaves": 31,
+        "scale_pos_weight": 4.146096162329069,
+        "random_state": 42
+      }
+    },
+    "GradientBoosting_AutoML": {
+      "model": "GradientBoosting_AutoML",
+      "auc_train": 0.7067,
+      "auc_test": 0.7041,
+      "gini": 0.4082,
+      "ks": 0.2989,
+      "precision": 0.5679,
+      "recall": 0.0336,
+      "f1": 0.0634,
+      "overfit": 0.0026,
+      "best_params": {
+        "n_estimators": 100,
+        "max_depth": 3,
+        "learning_rate": 0.05
+      }
+    }
+  },
+  "optuna_trials_run": 3,
+  "optuna_trials_history": {
+    "n_trials": 3,
+    "best_auc": 0.6984,
+    "best_params": {
+      "n_estimators": 433,
+      "max_depth": 4,
+      "learning_rate": 0.01855998084649059,
+      "subsample": 0.6733618039413735,
+      "colsample_bytree": 0.6521211214797689,
+      "min_child_weight": 29
+    },
+    "worst_auc": 0.6755,
+    "top_3_trials": [
+      {
+        "trial": 2,
+        "auc": 0.6984,
+        "params": {
+          "n_estimators": 433,
+          "max_depth": 4,
+          "learning_rate": 0.01855998084649059,
+          "subsample": 0.6733618039413735,
+          "colsample_bytree": 0.6521211214797689,
+          "min_child_weight": 29
+        }
+      },
+      {
+        "trial": 1,
+        "auc": 0.6928,
+        "params": {
+          "n_estimators": 123,
+          "max_depth": 7,
+          "learning_rate": 0.07725378389307355,
+          "subsample": 0.8832290311184181,
+          "colsample_bytree": 0.5102922471479012,
+          "min_child_weight": 49
+        }
+      },
+      {
+        "trial": 0,
+        "auc": 0.6755,
+        "params": {
+          "n_estimators": 250,
+          "max_depth": 7,
+          "learning_rate": 0.1205712628744377,
+          "subsample": 0.8394633936788146,
+          "colsample_bytree": 0.5780093202212182,
+          "min_child_weight": 12
+        }
+      }
+    ]
+  },
+  "split_method": "time_based",
+  "split_details": {
+    "method": "OOT: time-based latest 20% | Train/Test: random 70/30 within Dev 80%",
+    "total": 104164,
+    "dev_size": 83331,
+    "train_size": 58331,
+    "test_size": 25000,
+    "oot_size": 20833,
+    "dev_pct": 80,
+    "oot_pct": 20,
+    "train_pct": 70,
+    "test_pct": 30,
+    "train_default_rate": 0.19432205859662957,
+    "test_default_rate": 0.19432,
+    "oot_default_rate": 0.20328325253204052,
+    "time_col_used": "issue_year",
+    "note": "OOT=latest 20% by issue_year. Train/Test=random stratified 70/30 within Dev 80%"
+  },
+  "feature_importance": {
+    "int_rate_clean": "0.47991762",
+    "loan_to_income": "0.16175668",
+    "annual_inc": "0.13677236",
+    "dti": "0.11174195",
+    "tot_cur_bal": "0.06272016",
+    "revol_util": "0.0497443",
+    "open_acc_ratio": "0.046709154",
+    "loan_amnt": "0.0247264",
+    "verification_ordinal": "0.014222354"
+  },
+  "shap_summary": "",
+  "adverse_action_codes": {
+    "sample_939": {
+      "predicted_prob": 0.8715,
+      "top_reasons": [
+        {
+          "feature": "int_rate_clean",
+          "value": 25.99,
+          "shap": 0.222,
+          "reason_code": "High int_rate_clean increases default risk"
+        },
+        {
+          "feature": "revol_util",
+          "value": 79.6,
+          "shap": 0.0926,
+          "reason_code": "High revol_util increases default risk"
+        },
+        {
+          "feature": "verification_ordinal",
+          "value": 1.0,
+          "shap": 0.0081,
+          "reason_code": "High verification_ordinal increases default risk"
+        }
+      ]
+    }
+  },
+  "fairness_results": {
+    "verification_status": {
+      "Not Verified": {
+        "count": 8714,
+        "mean_predicted": 0.4084,
+        "actual_rate": 0.1566,
+        "diff_from_avg": -0.0491,
+        "concern_level": "Low"
+      },
+      "Source Verified": {
+        "count": 7780,
+        "mean_predicted": 0.4641,
+        "actual_rate": 0.2059,
+        "diff_from_avg": 0.0066,
+        "concern_level": "Low"
+      },
+      "Verified": {
+        "count": 8506,
+        "mean_predicted": 0.5017,
+        "actual_rate": 0.2223,
+        "diff_from_avg": 0.0442,
+        "concern_level": "Low"
+      }
+    },
+    "home_ownership": {
+      "MORTGAGE": {
+        "count": 12099,
+        "mean_predicted": 0.4306,
+        "actual_rate": 0.1738,
+        "diff_from_avg": -0.0268,
+        "concern_level": "Low"
+      },
+      "OWN": {
+        "count": 2082,
+        "mean_predicted": 0.4777,
+        "actual_rate": 0.2032,
+        "diff_from_avg": 0.0203,
+        "concern_level": "Low"
+      },
+      "RENT": {
+        "count": 10794,
+        "mean_predicted": 0.4837,
+        "actual_rate": 0.2155,
+        "diff_from_avg": 0.0262,
+        "concern_level": "Low"
+      }
+    },
+    "purpose": {
+      "car": {
+        "count": 446,
+        "mean_predicted": 0.3575,
+        "actual_rate": 0.1099,
+        "diff_from_avg": -0.1,
+        "concern_level": "Low"
+      },
+      "credit_card": {
+        "count": 5105,
+        "mean_predicted": 0.4397,
+        "actual_rate": 0.1689,
+        "diff_from_avg": -0.0178,
+        "concern_level": "Low"
+      },
+      "debt_consolidation": {
+        "count": 13940,
+        "mean_predicted": 0.4775,
+        "actual_rate": 0.2057,
+        "diff_from_avg": 0.0201,
+        "concern_level": "Low"
+      },
+      "educational": {
+        "count": 75,
+        "mean_predicted": 0.4371,
+        "actual_rate": 0.2,
+        "diff_from_avg": -0.0203,
+        "concern_level": "Low"
+      },
+      "home_improvement": {
+        "count": 1579,
+        "mean_predicted": 0.4059,
+        "actual_rate": 0.1811,
+        "diff_from_avg": -0.0516,
+        "concern_level": "Low"
+      },
+      "house": {
+        "count": 178,
+        "mean_predicted": 0.4557,
+        "actual_rate": 0.1461,
+        "diff_from_avg": -0.0018,
+        "concern_level": "Low"
+      },
+      "major_purchase": {
+        "count": 690,
+        "mean_predicted": 0.3844,
+        "actual_rate": 0.1246,
+        "diff_from_avg": -0.073,
+        "concern_level": "Low"
+      },
+      "medical": {
+        "count": 313,
+        "mean_predicted": 0.4472,
+        "actual_rate": 0.1917,
+        "diff_from_avg": -0.0102,
+        "concern_level": "Low"
+      },
+      "moving": {
+        "count": 182,
+        "mean_predicted": 0.4649,
+        "actual_rate": 0.2418,
+        "diff_from_avg": 0.0074,
+        "concern_level": "Low"
+      },
+      "other": {
+        "count": 1482,
+        "mean_predicted": 0.4544,
+        "actual_rate": 0.2173,
+        "diff_from_avg": -0.0031,
+        "concern_level": "Low"
+      },
+      "small_business": {
+        "count": 574,
+        "mean_predicted": 0.4763,
+        "actual_rate": 0.2962,
+        "diff_from_avg": 0.0188,
+        "concern_level": "Low"
+      },
+      "vacation": {
+        "count": 183,
+        "mean_predicted": 0.4374,
+        "actual_rate": 0.2131,
+        "diff_from_avg": -0.02,
+        "concern_level": "Low"
+      },
+      "wedding": {
+        "count": 224,
+        "mean_predicted": 0.4056,
+        "actual_rate": 0.1161,
+        "diff_from_avg": -0.0518,
+        "concern_level": "Low"
+      }
+    },
+    "addr_state": {
+      "AK": {
+        "count": 75,
+        "mean_predicted": 0.4807,
+        "actual_rate": 0.12,
+        "diff_from_avg": 0.0233,
+        "concern_level": "Low"
+      },
+      "AL": {
+        "count": 331,
+        "mean_predicted": 0.4722,
+        "actual_rate": 0.2326,
+        "diff_from_avg": 0.0147,
+        "concern_level": "Low"
+      },
+      "AR": {
+        "count": 164,
+        "mean_predicted": 0.4922,
+        "actual_rate": 0.2439,
+        "diff_from_avg": 0.0347,
+        "concern_level": "Low"
+      },
+      "AZ": {
+        "count": 581,
+        "mean_predicted": 0.4652,
+        "actual_rate": 0.1773,
+        "diff_from_avg": 0.0078,
+        "concern_level": "Low"
+      },
+      "CA": {
+        "count": 4423,
+        "mean_predicted": 0.4476,
+        "actual_rate": 0.1958,
+        "diff_from_avg": -0.0099,
+        "concern_level": "Low"
+      },
+      "CO": {
+        "count": 536,
+        "mean_predicted": 0.4682,
+        "actual_rate": 0.1735,
+        "diff_from_avg": 0.0108,
+        "concern_level": "Low"
+      },
+      "CT": {
+        "count": 373,
+        "mean_predicted": 0.4385,
+        "actual_rate": 0.1877,
+        "diff_from_avg": -0.019,
+        "concern_level": "Low"
+      },
+      "DC": {
+        "count": 93,
+        "mean_predicted": 0.3927,
+        "actual_rate": 0.086,
+        "diff_from_avg": -0.0648,
+        "concern_level": "Low"
+      },
+      "DE": {
+        "count": 85,
+        "mean_predicted": 0.4555,
+        "actual_rate": 0.1882,
+        "diff_from_avg": -0.002,
+        "concern_level": "Low"
+      },
+      "FL": {
+        "count": 1787,
+        "mean_predicted": 0.4633,
+        "actual_rate": 0.2043,
+        "diff_from_avg": 0.0058,
+        "concern_level": "Low"
+      },
+      "GA": {
+        "count": 755,
+        "mean_predicted": 0.4405,
+        "actual_rate": 0.1762,
+        "diff_from_avg": -0.017,
+        "concern_level": "Low"
+      },
+      "HI": {
+        "count": 130,
+        "mean_predicted": 0.4792,
+        "actual_rate": 0.1846,
+        "diff_from_avg": 0.0217,
+        "concern_level": "Low"
+      },
+      "IL": {
+        "count": 927,
+        "mean_predicted": 0.4535,
+        "actual_rate": 0.1888,
+        "diff_from_avg": -0.0039,
+        "concern_level": "Low"
+      },
+      "IN": {
+        "count": 269,
+        "mean_predicted": 0.5024,
+        "actual_rate": 0.2416,
+        "diff_from_avg": 0.0449,
+        "concern_level": "Low"
+      },
+      "KS": {
+        "count": 194,
+        "mean_predicted": 0.4822,
+        "actual_rate": 0.1649,
+        "diff_from_avg": 0.0247,
+        "concern_level": "Low"
+      },
+      "KY": {
+        "count": 209,
+        "mean_predicted": 0.4716,
+        "actual_rate": 0.2344,
+        "diff_from_avg": 0.0141,
+        "concern_level": "Low"
+      },
+      "LA": {
+        "count": 301,
+        "mean_predicted": 0.4604,
+        "actual_rate": 0.1628,
+        "diff_from_avg": 0.0029,
+        "concern_level": "Low"
+      },
+      "MA": {
+        "count": 617,
+        "mean_predicted": 0.4421,
+        "actual_rate": 0.1896,
+        "diff_from_avg": -0.0154,
+        "concern_level": "Low"
+      },
+      "MD": {
+        "count": 587,
+        "mean_predicted": 0.4442,
+        "actual_rate": 0.1925,
+        "diff_from_avg": -0.0133,
+        "concern_level": "Low"
+      },
+      "MI": {
+        "count": 618,
+        "mean_predicted": 0.4742,
+        "actual_rate": 0.1974,
+        "diff_from_avg": 0.0167,
+        "concern_level": "Low"
+      },
+      "MN": {
+        "count": 414,
+        "mean_predicted": 0.4665,
+        "actual_rate": 0.1981,
+        "diff_from_avg": 0.009,
+        "concern_level": "Low"
+      },
+      "MO": {
+        "count": 374,
+        "mean_predicted": 0.4629,
+        "actual_rate": 0.2299,
+        "diff_from_avg": 0.0054,
+        "concern_level": "Low"
+      },
+      "MT": {
+        "count": 71,
+        "mean_predicted": 0.4982,
+        "actual_rate": 0.1268,
+        "diff_from_avg": 0.0407,
+        "concern_level": "Low"
+      },
+      "NC": {
+        "count": 645,
+        "mean_predicted": 0.4749,
+        "actual_rate": 0.2279,
+        "diff_from_avg": 0.0175,
+        "concern_level": "Low"
+      },
+      "NH": {
+        "count": 120,
+        "mean_predicted": 0.4527,
+        "actual_rate": 0.2083,
+        "diff_from_avg": -0.0048,
+        "concern_level": "Low"
+      },
+      "NJ": {
+        "count": 957,
+        "mean_predicted": 0.4459,
+        "actual_rate": 0.2048,
+        "diff_from_avg": -0.0116,
+        "concern_level": "Low"
+      },
+      "NM": {
+        "count": 138,
+        "mean_predicted": 0.4693,
+        "actual_rate": 0.1957,
+        "diff_from_avg": 0.0119,
+        "concern_level": "Low"
+      },
+      "NV": {
+        "count": 370,
+        "mean_predicted": 0.4579,
+        "actual_rate": 0.2568,
+        "diff_from_avg": 0.0004,
+        "concern_level": "Low"
+      },
+      "NY": {
+        "count": 2070,
+        "mean_predicted": 0.453,
+        "actual_rate": 0.2068,
+        "diff_from_avg": -0.0045,
+        "concern_level": "Low"
+      },
+      "OH": {
+        "count": 764,
+        "mean_predicted": 0.4835,
+        "actual_rate": 0.216,
+        "diff_from_avg": 0.0261,
+        "concern_level": "Low"
+      },
+      "OK": {
+        "count": 201,
+        "mean_predicted": 0.465,
+        "actual_rate": 0.1891,
+        "diff_from_avg": 0.0075,
+        "concern_level": "Low"
+      },
+      "OR": {
+        "count": 335,
+        "mean_predicted": 0.4659,
+        "actual_rate": 0.1821,
+        "diff_from_avg": 0.0084,
+        "concern_level": "Low"
+      },
+      "PA": {
+        "count": 868,
+        "mean_predicted": 0.4603,
+        "actual_rate": 0.197,
+        "diff_from_avg": 0.0028,
+        "concern_level": "Low"
+      },
+      "RI": {
+        "count": 93,
+        "mean_predicted": 0.4235,
+        "actual_rate": 0.1828,
+        "diff_from_avg": -0.0339,
+        "concern_level": "Low"
+      },
+      "SC": {
+        "count": 252,
+        "mean_predicted": 0.4687,
+        "actual_rate": 0.1865,
+        "diff_from_avg": 0.0113,
+        "concern_level": "Low"
+      },
+      "SD": {
+        "count": 63,
+        "mean_predicted": 0.5017,
+        "actual_rate": 0.1587,
+        "diff_from_avg": 0.0443,
+        "concern_level": "Low"
+      },
+      "TN": {
+        "count": 207,
+        "mean_predicted": 0.4996,
+        "actual_rate": 0.2512,
+        "diff_from_avg": 0.0422,
+        "concern_level": "Low"
+      },
+      "TX": {
+        "count": 1863,
+        "mean_predicted": 0.4467,
+        "actual_rate": 0.1616,
+        "diff_from_avg": -0.0108,
+        "concern_level": "Low"
+      },
+      "UT": {
+        "count": 196,
+        "mean_predicted": 0.4727,
+        "actual_rate": 0.1786,
+        "diff_from_avg": 0.0153,
+        "concern_level": "Low"
+      },
+      "VA": {
+        "count": 807,
+        "mean_predicted": 0.444,
+        "actual_rate": 0.171,
+        "diff_from_avg": -0.0135,
+        "concern_level": "Low"
+      },
+      "VT": {
+        "count": 41,
+        "mean_predicted": 0.4412,
+        "actual_rate": 0.0976,
+        "diff_from_avg": -0.0163,
+        "concern_level": "Low"
+      },
+      "WA": {
+        "count": 572,
+        "mean_predicted": 0.4654,
+        "actual_rate": 0.1836,
+        "diff_from_avg": 0.0079,
+        "concern_level": "Low"
+      },
+      "WI": {
+        "count": 320,
+        "mean_predicted": 0.4715,
+        "actual_rate": 0.1969,
+        "diff_from_avg": 0.0141,
+        "concern_level": "Low"
+      },
+      "WV": {
+        "count": 109,
+        "mean_predicted": 0.4732,
+        "actual_rate": 0.1376,
+        "diff_from_avg": 0.0158,
+        "concern_level": "Low"
+      },
+      "WY": {
+        "count": 59,
+        "mean_predicted": 0.4878,
+        "actual_rate": 0.1356,
+        "diff_from_avg": 0.0303,
+        "concern_level": "Low"
+      }
+    }
+  },
+  "validation_metrics": {
+    "auc": 0.7058,
+    "gini": 0.4116,
+    "ks": 0.299,
+    "decile_table": [
+      {
+        "decile": 1,
+        "n": 2500,
+        "n_bad": 101,
+        "avg_prob": 0.16301755607128143,
+        "bad_rate": 0.0404,
+        "ro_break": false
+      },
+      {
+        "decile": 2,
+        "n": 2500,
+        "n_bad": 196,
+        "avg_prob": 0.2690716087818146,
+        "bad_rate": 0.0784,
+        "ro_break": false
+      },
+      {
+        "decile": 3,
+        "n": 2500,
+        "n_bad": 291,
+        "avg_prob": 0.3310246765613556,
+        "bad_rate": 0.1164,
+        "ro_break": false
+      },
+      {
+        "decile": 4,
+        "n": 2500,
+        "n_bad": 316,
+        "avg_prob": 0.3816649615764618,
+        "bad_rate": 0.1264,
+        "ro_break": false
+      },
+      {
+        "decile": 5,
+        "n": 2500,
+        "n_bad": 397,
+        "avg_prob": 0.43011751770973206,
+        "bad_rate": 0.1588,
+        "ro_break": false
+      },
+      {
+        "decile": 6,
+        "n": 2500,
+        "n_bad": 448,
+        "avg_prob": 0.4808473289012909,
+        "bad_rate": 0.1792,
+        "ro_break": false
+      },
+      {
+        "decile": 7,
+        "n": 2500,
+        "n_bad": 532,
+        "avg_prob": 0.5302103757858276,
+        "bad_rate": 0.2128,
+        "ro_break": false
+      },
+      {
+        "decile": 8,
+        "n": 2500,
+        "n_bad": 666,
+        "avg_prob": 0.5860746502876282,
+        "bad_rate": 0.2664,
+        "ro_break": false
+      },
+      {
+        "decile": 9,
+        "n": 2500,
+        "n_bad": 804,
+        "avg_prob": 0.6517034769058228,
+        "bad_rate": 0.3216,
+        "ro_break": false
+      },
+      {
+        "decile": 10,
+        "n": 2500,
+        "n_bad": 1107,
+        "avg_prob": 0.7509698271751404,
+        "bad_rate": 0.4428,
+        "ro_break": false
+      }
+    ],
+    "auc_oot_d1": 0.695,
+    "gini_oot_d1": 0.3899,
+    "ks_oot_d1": 0.2845,
+    "auc_oot": 0.695,
+    "gini_oot": 0.3899,
+    "ks_oot": 0.2845,
+    "kpi_scoreboard": [
+      {
+        "KPI": "Gini",
+        "Formula": "Gini = 2\u00d7AUROC\u22121",
+        "Value": 0.3899,
+        "RAG": "GREEN",
+        "Strength": "Acceptable",
+        "Threshold (GREEN)": "\u22650.35",
+        "Threshold (AMBER)": "0.30\u20130.35",
+        "Threshold (RED)": "<0.30"
+      },
+      {
+        "KPI": "AUC / AUROC",
+        "Formula": "Area under ROC curve",
+        "Value": 0.695,
+        "RAG": "GREEN",
+        "Strength": "Acceptable",
+        "Threshold (GREEN)": ">0.68",
+        "Threshold (AMBER)": "0.65\u20130.68",
+        "Threshold (RED)": "<0.65"
+      },
+      {
+        "KPI": "KS Statistic",
+        "Formula": "max|Cum%Bad\u2212Cum%Good|",
+        "Value": 0.2845,
+        "RAG": "GREEN",
+        "Strength": "Acceptable",
+        "Threshold (GREEN)": "0.25\u20130.65",
+        "Threshold (AMBER)": "0.20\u20130.25",
+        "Threshold (RED)": "<0.20"
+      },
+      {
+        "KPI": "Rank Order Breaks",
+        "Formula": "Count deciles where bad rate rises vs adjacent higher-risk decile",
+        "Value": 0,
+        "RAG": "GREEN",
+        "Strength": "No breaks",
+        "Threshold (GREEN)": "No breaks / 1 minor",
+        "Threshold (AMBER)": "2 below cutoff",
+        "Threshold (RED)": "At cutoff or >2"
+      },
+      {
+        "KPI": "PSI (Population Stability)",
+        "Formula": "\u03a3 (%Dev\u2212%OOT)\u00d7ln(%Dev\u00f7%OOT)",
+        "Value": 0.0113,
+        "RAG": "GREEN",
+        "Strength": "Strong",
+        "Threshold (GREEN)": "<0.10",
+        "Threshold (AMBER)": "0.10\u20130.25",
+        "Threshold (RED)": ">0.25"
+      }
+    ],
+    "confusion_matrix": {
+      "threshold": 0.5,
+      "true_positive": 3155,
+      "false_positive": 7138,
+      "true_negative": 13004,
+      "false_negative": 1703,
+      "accuracy": 0.6464,
+      "precision": 0.3065,
+      "recall": 0.6494,
+      "specificity": 0.6456,
+      "f1_score": 0.4165,
+      "note": "0.5 threshold used for reporting only \u2014 NOT necessarily the correct business decision threshold. Optimal threshold should be set based on false-negative/false-positive cost ratio."
+    },
+    "classification_report": {
+      "Good (0)": {
+        "precision": 0.8842048004351669,
+        "recall": 0.6456161255088869,
+        "f1-score": 0.7463054893971133,
+        "support": 20142.0
+      },
+      "Bad (1)": {
+        "precision": 0.30651899349072187,
+        "recall": 0.6494442157266365,
+        "f1-score": 0.4164741601214441,
+        "support": 4858.0
+      },
+      "accuracy": 0.64636,
+      "macro avg": {
+        "precision": 0.5953618969629444,
+        "recall": 0.6475301706177616,
+        "f1-score": 0.5813898247592787,
+        "support": 25000.0
+      },
+      "weighted avg": {
+        "precision": 0.7719488944297225,
+        "recall": 0.64636,
+        "f1-score": 0.6822126654922652,
+        "support": 25000.0
+      }
+    },
+    "csi_results": {
+      "int_rate_clean": {
+        "csi": 0.0746,
+        "assessment": "Stable"
+      },
+      "loan_to_income": {
+        "csi": 0.0074,
+        "assessment": "Stable"
+      },
+      "annual_inc": {
+        "csi": 0.0016,
+        "assessment": "Stable"
+      },
+      "dti": {
+        "csi": 0.0141,
+        "assessment": "Stable"
+      },
+      "tot_cur_bal": {
+        "csi": 0.0665,
+        "assessment": "Stable"
+      }
+    },
+    "gini_gap": 0.1053,
+    "gini_gap_rag": "AMBER",
+    "feature_kpi_table": [
+      {
+        "Feature": "int_rate_clean",
+        "IV": 0.4014,
+        "IV RAG": "GREEN",
+        "CSI": 0.0746,
+        "CSI RAG": "GREEN",
+        "VDI": "N/A",
+        "Notes": ""
+      },
+      {
+        "Feature": "loan_to_income",
+        "IV": 0.1522,
+        "IV RAG": "GREEN",
+        "CSI": 0.0074,
+        "CSI RAG": "GREEN",
+        "VDI": "N/A",
+        "Notes": ""
+      },
+      {
+        "Feature": "dti",
+        "IV": 0.0837,
+        "IV RAG": "AMBER",
+        "CSI": 0.0141,
+        "CSI RAG": "GREEN",
+        "VDI": "N/A",
+        "Notes": "IV<0.10 \u2014 weak, monitor"
+      },
+      {
+        "Feature": "annual_inc",
+        "IV": 0.0609,
+        "IV RAG": "AMBER",
+        "CSI": 0.0016,
+        "CSI RAG": "GREEN",
+        "VDI": "N/A",
+        "Notes": "IV<0.10 \u2014 weak, monitor"
+      },
+      {
+        "Feature": "revol_util",
+        "IV": 0.0601,
+        "IV RAG": "AMBER",
+        "CSI": "N/A",
+        "CSI RAG": "N/A",
+        "VDI": "N/A",
+        "Notes": "IV<0.10 \u2014 weak, monitor"
+      },
+      {
+        "Feature": "tot_cur_bal",
+        "IV": 0.0454,
+        "IV RAG": "AMBER",
+        "CSI": 0.0665,
+        "CSI RAG": "GREEN",
+        "VDI": "N/A",
+        "Notes": "IV<0.10 \u2014 weak, monitor"
+      },
+      {
+        "Feature": "loan_amnt",
+        "IV": 0.0264,
+        "IV RAG": "AMBER",
+        "CSI": "N/A",
+        "CSI RAG": "N/A",
+        "VDI": "N/A",
+        "Notes": "IV<0.10 \u2014 weak, monitor"
+      },
+      {
+        "Feature": "open_acc_ratio",
+        "IV": 0.0225,
+        "IV RAG": "AMBER",
+        "CSI": "N/A",
+        "CSI RAG": "N/A",
+        "VDI": "N/A",
+        "Notes": "IV<0.10 \u2014 weak, monitor"
+      },
+      {
+        "Feature": "verification_ordinal",
+        "IV": 0.0206,
+        "IV RAG": "AMBER",
+        "CSI": "N/A",
+        "CSI RAG": "N/A",
+        "VDI": "N/A",
+        "Notes": "IV<0.10 \u2014 weak, monitor"
+      }
+    ],
+    "findings_register": [
+      {
+        "Ref": "F01",
+        "Category": "Variable Quality",
+        "Finding": "dti: IV=0.0837 weak (<0.10) \u2014 limited standalone predictive power",
+        "Severity": "Low",
+        "Recommended Remediation": "Monitor; consider dropping or combining with stronger features",
+        "Status": "Open"
+      },
+      {
+        "Ref": "F02",
+        "Category": "Variable Quality",
+        "Finding": "annual_inc: IV=0.0609 weak (<0.10) \u2014 limited standalone predictive power",
+        "Severity": "Low",
+        "Recommended Remediation": "Monitor; consider dropping or combining with stronger features",
+        "Status": "Open"
+      },
+      {
+        "Ref": "F03",
+        "Category": "Variable Quality",
+        "Finding": "revol_util: IV=0.0601 weak (<0.10) \u2014 limited standalone predictive power",
+        "Severity": "Low",
+        "Recommended Remediation": "Monitor; consider dropping or combining with stronger features",
+        "Status": "Open"
+      },
+      {
+        "Ref": "F04",
+        "Category": "Variable Quality",
+        "Finding": "tot_cur_bal: IV=0.0454 weak (<0.10) \u2014 limited standalone predictive power",
+        "Severity": "Low",
+        "Recommended Remediation": "Monitor; consider dropping or combining with stronger features",
+        "Status": "Open"
+      },
+      {
+        "Ref": "F05",
+        "Category": "Variable Quality",
+        "Finding": "loan_amnt: IV=0.0264 weak (<0.10) \u2014 limited standalone predictive power",
+        "Severity": "Low",
+        "Recommended Remediation": "Monitor; consider dropping or combining with stronger features",
+        "Status": "Open"
+      },
+      {
+        "Ref": "F06",
+        "Category": "Variable Quality",
+        "Finding": "open_acc_ratio: IV=0.0225 weak (<0.10) \u2014 limited standalone predictive power",
+        "Severity": "Low",
+        "Recommended Remediation": "Monitor; consider dropping or combining with stronger features",
+        "Status": "Open"
+      },
+      {
+        "Ref": "F07",
+        "Category": "Variable Quality",
+        "Finding": "verification_ordinal: IV=0.0206 weak (<0.10) \u2014 limited standalone predictive power",
+        "Severity": "Low",
+        "Recommended Remediation": "Monitor; consider dropping or combining with stronger features",
+        "Status": "Open"
+      }
+    ],
+    "brier_score": 0.2164,
+    "calibration_error": 0.2341,
+    "challenger_table": [
+      {
+        "model": "LogisticRegression",
+        "auc_test": 0.7,
+        "ks": 0.2912,
+        "gini": 0.4001,
+        "overfit": -0.0059,
+        "champion": ""
+      },
+      {
+        "model": "RandomForest",
+        "auc_test": 0.7038,
+        "ks": 0.2988,
+        "gini": 0.4076,
+        "overfit": 0.0268,
+        "champion": ""
+      },
+      {
+        "model": "XGBoost",
+        "auc_test": 0.7058,
+        "ks": 0.299,
+        "gini": 0.4116,
+        "overfit": 0.0121,
+        "champion": "\u2713"
+      },
+      {
+        "model": "LightGBM",
+        "auc_test": 0.7038,
+        "ks": 0.2969,
+        "gini": 0.4076,
+        "overfit": 0.0231,
+        "champion": ""
+      },
+      {
+        "model": "GradientBoosting_AutoML",
+        "auc_test": 0.7041,
+        "ks": 0.2989,
+        "gini": 0.4082,
+        "overfit": 0.0026,
+        "champion": ""
+      }
+    ]
+  },
+  "kpi_scoreboard": [
+    {
+      "KPI": "Gini",
+      "Formula": "Gini = 2\u00d7AUROC\u22121",
+      "Value": 0.3899,
+      "RAG": "GREEN",
+      "Strength": "Acceptable",
+      "Threshold (GREEN)": "\u22650.35",
+      "Threshold (AMBER)": "0.30\u20130.35",
+      "Threshold (RED)": "<0.30"
+    },
+    {
+      "KPI": "AUC / AUROC",
+      "Formula": "Area under ROC curve",
+      "Value": 0.695,
+      "RAG": "GREEN",
+      "Strength": "Acceptable",
+      "Threshold (GREEN)": ">0.68",
+      "Threshold (AMBER)": "0.65\u20130.68",
+      "Threshold (RED)": "<0.65"
+    },
+    {
+      "KPI": "KS Statistic",
+      "Formula": "max|Cum%Bad\u2212Cum%Good|",
+      "Value": 0.2845,
+      "RAG": "GREEN",
+      "Strength": "Acceptable",
+      "Threshold (GREEN)": "0.25\u20130.65",
+      "Threshold (AMBER)": "0.20\u20130.25",
+      "Threshold (RED)": "<0.20"
+    },
+    {
+      "KPI": "Rank Order Breaks",
+      "Formula": "Count deciles where bad rate rises vs adjacent higher-risk decile",
+      "Value": 0,
+      "RAG": "GREEN",
+      "Strength": "No breaks",
+      "Threshold (GREEN)": "No breaks / 1 minor",
+      "Threshold (AMBER)": "2 below cutoff",
+      "Threshold (RED)": "At cutoff or >2"
+    },
+    {
+      "KPI": "PSI (Population Stability)",
+      "Formula": "\u03a3 (%Dev\u2212%OOT)\u00d7ln(%Dev\u00f7%OOT)",
+      "Value": 0.0113,
+      "RAG": "GREEN",
+      "Strength": "Strong",
+      "Threshold (GREEN)": "<0.10",
+      "Threshold (AMBER)": "0.10\u20130.25",
+      "Threshold (RED)": ">0.25"
+    }
+  ],
+  "feature_kpi_table": [
+    {
+      "Feature": "int_rate_clean",
+      "IV": 0.4014,
+      "IV RAG": "GREEN",
+      "CSI": 0.0746,
+      "CSI RAG": "GREEN",
+      "VDI": "N/A",
+      "Notes": ""
+    },
+    {
+      "Feature": "loan_to_income",
+      "IV": 0.1522,
+      "IV RAG": "GREEN",
+      "CSI": 0.0074,
+      "CSI RAG": "GREEN",
+      "VDI": "N/A",
+      "Notes": ""
+    },
+    {
+      "Feature": "dti",
+      "IV": 0.0837,
+      "IV RAG": "AMBER",
+      "CSI": 0.0141,
+      "CSI RAG": "GREEN",
+      "VDI": "N/A",
+      "Notes": "IV<0.10 \u2014 weak, monitor"
+    },
+    {
+      "Feature": "annual_inc",
+      "IV": 0.0609,
+      "IV RAG": "AMBER",
+      "CSI": 0.0016,
+      "CSI RAG": "GREEN",
+      "VDI": "N/A",
+      "Notes": "IV<0.10 \u2014 weak, monitor"
+    },
+    {
+      "Feature": "revol_util",
+      "IV": 0.0601,
+      "IV RAG": "AMBER",
+      "CSI": "N/A",
+      "CSI RAG": "N/A",
+      "VDI": "N/A",
+      "Notes": "IV<0.10 \u2014 weak, monitor"
+    },
+    {
+      "Feature": "tot_cur_bal",
+      "IV": 0.0454,
+      "IV RAG": "AMBER",
+      "CSI": 0.0665,
+      "CSI RAG": "GREEN",
+      "VDI": "N/A",
+      "Notes": "IV<0.10 \u2014 weak, monitor"
+    },
+    {
+      "Feature": "loan_amnt",
+      "IV": 0.0264,
+      "IV RAG": "AMBER",
+      "CSI": "N/A",
+      "CSI RAG": "N/A",
+      "VDI": "N/A",
+      "Notes": "IV<0.10 \u2014 weak, monitor"
+    },
+    {
+      "Feature": "open_acc_ratio",
+      "IV": 0.0225,
+      "IV RAG": "AMBER",
+      "CSI": "N/A",
+      "CSI RAG": "N/A",
+      "VDI": "N/A",
+      "Notes": "IV<0.10 \u2014 weak, monitor"
+    },
+    {
+      "Feature": "verification_ordinal",
+      "IV": 0.0206,
+      "IV RAG": "AMBER",
+      "CSI": "N/A",
+      "CSI RAG": "N/A",
+      "VDI": "N/A",
+      "Notes": "IV<0.10 \u2014 weak, monitor"
+    }
+  ],
+  "findings_register": [
+    {
+      "Ref": "F01",
+      "Category": "Variable Quality",
+      "Finding": "dti: IV=0.0837 weak (<0.10) \u2014 limited standalone predictive power",
+      "Severity": "Low",
+      "Recommended Remediation": "Monitor; consider dropping or combining with stronger features",
+      "Status": "Open"
+    },
+    {
+      "Ref": "F02",
+      "Category": "Variable Quality",
+      "Finding": "annual_inc: IV=0.0609 weak (<0.10) \u2014 limited standalone predictive power",
+      "Severity": "Low",
+      "Recommended Remediation": "Monitor; consider dropping or combining with stronger features",
+      "Status": "Open"
+    },
+    {
+      "Ref": "F03",
+      "Category": "Variable Quality",
+      "Finding": "revol_util: IV=0.0601 weak (<0.10) \u2014 limited standalone predictive power",
+      "Severity": "Low",
+      "Recommended Remediation": "Monitor; consider dropping or combining with stronger features",
+      "Status": "Open"
+    },
+    {
+      "Ref": "F04",
+      "Category": "Variable Quality",
+      "Finding": "tot_cur_bal: IV=0.0454 weak (<0.10) \u2014 limited standalone predictive power",
+      "Severity": "Low",
+      "Recommended Remediation": "Monitor; consider dropping or combining with stronger features",
+      "Status": "Open"
+    },
+    {
+      "Ref": "F05",
+      "Category": "Variable Quality",
+      "Finding": "loan_amnt: IV=0.0264 weak (<0.10) \u2014 limited standalone predictive power",
+      "Severity": "Low",
+      "Recommended Remediation": "Monitor; consider dropping or combining with stronger features",
+      "Status": "Open"
+    },
+    {
+      "Ref": "F06",
+      "Category": "Variable Quality",
+      "Finding": "open_acc_ratio: IV=0.0225 weak (<0.10) \u2014 limited standalone predictive power",
+      "Severity": "Low",
+      "Recommended Remediation": "Monitor; consider dropping or combining with stronger features",
+      "Status": "Open"
+    },
+    {
+      "Ref": "F07",
+      "Category": "Variable Quality",
+      "Finding": "verification_ordinal: IV=0.0206 weak (<0.10) \u2014 limited standalone predictive power",
+      "Severity": "Low",
+      "Recommended Remediation": "Monitor; consider dropping or combining with stronger features",
+      "Status": "Open"
+    }
+  ],
+  "psi_results": {
+    "psi_score": 0.0113,
+    "split_label": "earliest 70% vs latest 30% by issue_year",
+    "assessment": "Stable"
+  },
+  "calibration_results": {
+    "uncalibrated": {
+      "brier": 0.2164,
+      "ece": 0.2632,
+      "auc": 0.7058
+    },
+    "sigmoid": {
+      "brier": 0.143,
+      "ece": 0.0111,
+      "auc": 0.7058
+    },
+    "isotonic": {
+      "brier": 0.1432,
+      "ece": 0.0091
+    },
+    "recommended_method": "isotonic",
+    "reliability_uncalibrated": [
+      {
+        "bin": 0,
+        "count": 2500,
+        "mean_predicted": 0.16300000250339508,
+        "actual_rate": 0.0404,
+        "gap": -0.1226
+      },
+      {
+        "bin": 1,
+        "count": 2500,
+        "mean_predicted": 0.26910001039505005,
+        "actual_rate": 0.0784,
+        "gap": -0.1907
+      },
+      {
+        "bin": 2,
+        "count": 2500,
+        "mean_predicted": 0.3310000002384186,
+        "actual_rate": 0.1164,
+        "gap": -0.2146
+      },
+      {
+        "bin": 3,
+        "count": 2500,
+        "mean_predicted": 0.3817000091075897,
+        "actual_rate": 0.1264,
+        "gap": -0.2553
+      },
+      {
+        "bin": 4,
+        "count": 2500,
+        "mean_predicted": 0.4300999939441681,
+        "actual_rate": 0.1588,
+        "gap": -0.2713
+      },
+      {
+        "bin": 5,
+        "count": 2500,
+        "mean_predicted": 0.48080000281333923,
+        "actual_rate": 0.1792,
+        "gap": -0.3016
+      },
+      {
+        "bin": 6,
+        "count": 2500,
+        "mean_predicted": 0.5302000045776367,
+        "actual_rate": 0.2128,
+        "gap": -0.3174
+      },
+      {
+        "bin": 7,
+        "count": 2500,
+        "mean_predicted": 0.5860999822616577,
+        "actual_rate": 0.2664,
+        "gap": -0.3197
+      },
+      {
+        "bin": 8,
+        "count": 2500,
+        "mean_predicted": 0.6517000198364258,
+        "actual_rate": 0.3216,
+        "gap": -0.3301
+      },
+      {
+        "bin": 9,
+        "count": 2500,
+        "mean_predicted": 0.7509999871253967,
+        "actual_rate": 0.4428,
+        "gap": -0.3082
+      }
+    ],
+    "reliability_calibrated": [
+      {
+        "bin": 0,
+        "count": 4050,
+        "mean_predicted": 0.0517,
+        "actual_rate": 0.0516,
+        "gap": -0.0001
+      },
+      {
+        "bin": 1,
+        "count": 2268,
+        "mean_predicted": 0.0778,
+        "actual_rate": 0.1014,
+        "gap": 0.0236
+      },
+      {
+        "bin": 2,
+        "count": 1541,
+        "mean_predicted": 0.0906,
+        "actual_rate": 0.1213,
+        "gap": 0.0307
+      },
+      {
+        "bin": 3,
+        "count": 4098,
+        "mean_predicted": 0.1332,
+        "actual_rate": 0.142,
+        "gap": 0.0088
+      },
+      {
+        "bin": 4,
+        "count": 1502,
+        "mean_predicted": 0.1687,
+        "actual_rate": 0.1678,
+        "gap": -0.0009
+      },
+      {
+        "bin": 5,
+        "count": 2336,
+        "mean_predicted": 0.2067,
+        "actual_rate": 0.1935,
+        "gap": -0.0132
+      },
+      {
+        "bin": 6,
+        "count": 3250,
+        "mean_predicted": 0.2392,
+        "actual_rate": 0.2345,
+        "gap": -0.0047
+      },
+      {
+        "bin": 7,
+        "count": 1097,
+        "mean_predicted": 0.2791,
+        "actual_rate": 0.2944,
+        "gap": 0.0154
+      },
+      {
+        "bin": 8,
+        "count": 2387,
+        "mean_predicted": 0.3251,
+        "actual_rate": 0.3217,
+        "gap": -0.0033
+      },
+      {
+        "bin": 9,
+        "count": 2471,
+        "mean_predicted": 0.4731,
+        "actual_rate": 0.4423,
+        "gap": -0.0307
+      }
+    ],
+    "ece_threshold": 0.02,
+    "ece_status": "EXCEEDS \u2014 needs calibration"
+  },
+  "validation_summary": "",
+  "validation_passed": true,
+  "checkpoints": {
+    "target_confirmed": true,
+    "features_approved": true,
+    "model_signed_off": true
+  },
+  "agent_responses": {
+    "DataUnderstandingAgent": {
+      "agent_name": "DataUnderstandingAgent",
+      "summary": "Dataset profiled successfully",
+      "observations": [
+        "Loaded 104,164 rows \u00d7 73 columns",
+        "Target column detected: 'loan_status' (exact name match ('loan_status'))",
+        "Default rate: 19.61%",
+        "Indeterminate rows excluded: 88,426",
+        "Structural leakage columns removed: 13",
+        "Behavioral leakage columns flagged (AUC \u2265 0.65): 1",
+        "Date columns identified: 5",
+        "Categorical columns: 27",
+        "Numeric columns: 18",
+        "Schema drift: unknown"
+      ],
+      "reasoning": "Target auto-detected as 'loan_status'. Values classified dynamically: BAD\u21921, GOOD\u21920, INDETERMINATE\u2192excluded. Behavioral leakage scan ran univariate AUC on all numeric columns; 1 columns scored \u2265 0.65 and should be reviewed.",
+      "recommendations": [
+        "Confirm target definition with business stakeholders before modelling",
+        "Review leakage column list \u2014 ensure all post-origination fields are excluded",
+        "Investigate 1 behavioral leakage candidates before feature engineering",
+        "Review 8 identifier columns \u2014 verify none carry signal",
+        "Investigate date columns for credit age feature derivation"
+      ],
+      "artifacts": {},
+      "execution_time": 18.14,
+      "overall_status": "success"
+    },
+    "DQRAgent": {
+      "agent_name": "DQRAgent",
+      "summary": "Data quality review complete",
+      "observations": [
+        "Columns with any missing values: 33",
+        "High-missing columns (>40%) flagged: 20",
+        "Duplicate loan IDs found: 0",
+        "Duplicate member IDs found: 0",
+        "DQR flags raised: 23",
+        "Total rows in working dataset: 104,164"
+      ],
+      "reasoning": "Missing values above 40% threshold flagged for exclusion as they provide insufficient information for reliable imputation. IQR and z-score methods applied for outlier detection. Duplicates checked on loan ID and member ID.",
+      "recommendations": [
+        "Drop or carefully impute 20 high-missing columns",
+        "Apply median imputation for numeric features with <40% missing",
+        "Apply mode imputation for categorical features",
+        "Review flagged outliers \u2014 clip or winsorise extreme values before modelling"
+      ],
+      "artifacts": {},
+      "execution_time": 7.12,
+      "overall_status": "success"
+    },
+    "FeatureEngineeringAgent": {
+      "agent_name": "FeatureEngineeringAgent",
+      "summary": "Feature engineering complete",
+      "observations": [
+        "Engineered features created: 16",
+        "Final dataset shape: 104,164 rows \u00d7 71 columns",
+        "Date-derived features: credit age, months since earliest credit line",
+        "Domain features: DTI enrichment, revolving utilisation, delinquency indicators",
+        "Encoding: ordinal grade/subgrade, WOE for categorical variables",
+        "Imputation: median for numeric, mode for categorical"
+      ],
+      "reasoning": "Domain-driven features created based on credit risk best practices. Grade and subgrade encoded ordinally to preserve risk ordering. WOE encoding applied to categorical variables to capture default rate signal. Post-origination raw columns dropped after deriving engineered equivalents.",
+      "recommendations": [
+        "Review feature_log for any domain features that may be controversial",
+        "Validate WOE bins are monotonic for scorecarding compliance",
+        "Check that no engineered feature introduces inadvertent leakage",
+        "Consider adding vintage features if origination date is available"
+      ],
+      "artifacts": {
+        "feature_log_count": 16
+      },
+      "execution_time": 3.03,
+      "overall_status": "success"
+    },
+    "VariableSelectionAgent": {
+      "agent_name": "VariableSelectionAgent",
+      "summary": "Variable selection complete",
+      "observations": [
+        "Candidate features evaluated: 49",
+        "Features selected: 9",
+        "Features rejected: 40",
+        "Top features by IV: int_rate_clean (IV=0.4014), subgrade_ordinal (IV=0.3938), grade_ordinal (IV=0.3276)",
+        "IV threshold applied: 0.02 (useless below this)"
+      ],
+      "reasoning": "IV threshold 0.02 applied \u2014 features below this have insufficient discriminatory power for credit risk modelling. High correlation pairs resolved by keeping the feature with higher IV. Final shortlist capped at 25 features to prevent overfitting.",
+      "recommendations": [
+        "Review rejected features \u2014 some may have business value not captured by IV",
+        "Validate WOE bins for monotonicity before scorecard deployment",
+        "Consider interaction features between top IV variables",
+        "Ensure all 9 selected features pass regulatory scrutiny"
+      ],
+      "artifacts": {
+        "iv_threshold": 0.02,
+        "max_features": 25
+      },
+      "execution_time": 8.82,
+      "overall_status": "success"
+    },
+    "ModelDevelopmentAgent": {
+      "agent_name": "ModelDevelopmentAgent",
+      "summary": "Model development complete",
+      "observations": [
+        "Models trained: LogisticRegression, RandomForest, XGBoost, LightGBM, GradientBoosting_AutoML",
+        "Champion model: XGBoost",
+        "Champion AUC (test): 0.7058",
+        "Champion KS: 0.299",
+        "Champion Gini: 0.4116",
+        "Champion overfit (train-test AUC delta): 0.0121"
+      ],
+      "reasoning": "Champion selected via AUC on held-out test set with overfit penalty: score = auc_test - max(0, overfit - 0.03) * 2. Penalises models with train-test gap > 3pp to favour generalisable models.",
+      "recommendations": [
+        "Validate champion model on an independent out-of-time sample",
+        "Run PSI analysis to assess population stability before deployment",
+        "Review hyperparameters for regulatory model documentation",
+        "Consider ensemble or stacking if AUC is below 0.70"
+      ],
+      "artifacts": {
+        "models_trained": [
+          "LogisticRegression",
+          "RandomForest",
+          "XGBoost",
+          "LightGBM",
+          "GradientBoosting_AutoML"
+        ]
+      },
+      "execution_time": 105.04,
+      "overall_status": "success"
+    },
+    "ExplainabilityAgent": {
+      "agent_name": "ExplainabilityAgent",
+      "summary": "Explainability analysis complete",
+      "observations": [
+        "SHAP values computed for champion model: XGBoost",
+        "Features with SHAP importance: 9",
+        "Top 5 features by mean |SHAP|: int_rate_clean (0.4799), loan_to_income (0.1618), annual_inc (0.1368), dti (0.1117), tot_cur_bal (0.0627)",
+        "Adverse action codes generated for 1 sample applicants"
+      ],
+      "reasoning": "SHAP TreeExplainer used for tree-based models (XGBoost, RandomForest, GradientBoosting); KernelExplainer fallback used for Logistic Regression. Mean absolute SHAP value used as global feature importance metric. Adverse action codes derived from top negative SHAP contributors per applicant.",
+      "recommendations": [
+        "Review top SHAP features for regulatory and fairness concerns",
+        "Ensure adverse action codes map to standard industry reason codes",
+        "Conduct disparate impact analysis on protected attribute proxies",
+        "Document SHAP findings in model risk management documentation"
+      ],
+      "artifacts": {
+        "top_features": {
+          "int_rate_clean": "0.47991762",
+          "loan_to_income": "0.16175668",
+          "annual_inc": "0.13677236",
+          "dti": "0.11174195",
+          "tot_cur_bal": "0.06272016"
+        }
+      },
+      "execution_time": 3.18,
+      "overall_status": "success"
+    },
+    "ValidationAgent": {
+      "agent_name": "ValidationAgent",
+      "summary": "Model validation complete",
+      "observations": [
+        "AUC (test): 0.7058",
+        "KS: 0.299",
+        "Gini: 0.4116",
+        "Brier score: 0.2164",
+        "PSI score: 0.0113 \u2014 Stable",
+        "Validation outcome: PASS"
+      ],
+      "reasoning": "Industry-standard thresholds applied: AUC \u2265 0.65, KS \u2265 0.20, Gini \u2265 0.30. PSI < 0.10 indicates population stability; 0.10\u20130.25 moderate shift; >0.25 unstable. Brier score measures calibration quality \u2014 lower is better. Challenger comparison run across all trained candidate models.",
+      "recommendations": [
+        "Schedule quarterly PSI monitoring to detect population drift",
+        "Re-calibrate model if Brier score degrades by >0.02 from baseline",
+        "Conduct annual model validation with independent out-of-time data",
+        "Obtain sign-off from model risk governance before production deployment",
+        "Document all validation findings in the Model Risk Management (MRM) report"
+      ],
+      "artifacts": {},
+      "execution_time": 5.18,
+      "overall_status": "pass"
+    }
+  },
+  "recommendations": [
+    {
+      "title": "Target Variable Definition",
+      "recommendation": "Binary default flag derived from 'loan_status'. BAD (1): Charged Off, Does not meet the credit policy. Status:Charged Off, Default. GOOD (0): Fully Paid, Does not meet the credit policy. Status:Fully Paid. Default rate: 19.61%. Excluded indeterminate: 88,426 rows (45.9%). Final sample: 104,164 observations.",
+      "rationale": "Target auto-detected as 'loan_status'. Dynamic value classification applied: Current\u2192EXCL, Late (31-120 days)\u2192EXCL, In Grace Period\u2192EXCL + 1 more excluded",
+      "confidence": 0.9,
+      "risk": "medium",
+      "requires_human_approval": true,
+      "approver": null,
+      "decision": null,
+      "decision_notes": null,
+      "timestamp": "2026-07-12T21:51:59.866729"
+    },
+    {
+      "title": "Feature Shortlist",
+      "recommendation": "9 features selected for modelling",
+      "rationale": "IV threshold 0.02 applied. 9 features selected from 49 candidates. High-correlation pairs resolved by retaining higher-IV feature.",
+      "confidence": 0.85,
+      "risk": "low",
+      "requires_human_approval": true,
+      "approver": null,
+      "decision": null,
+      "decision_notes": null,
+      "timestamp": "2026-07-12T21:52:18.866442"
+    },
+    {
+      "title": "Champion Model Selection",
+      "recommendation": "XGBoost selected as champion model",
+      "rationale": "Champion selected via AUC on held-out test set with overfit penalty. AUC=0.7058, overfit delta=0.0121.",
+      "confidence": 0.7058,
+      "risk": "low",
+      "requires_human_approval": true,
+      "approver": null,
+      "decision": null,
+      "decision_notes": null,
+      "timestamp": "2026-07-12T21:54:03.978695"
+    },
+    {
+      "title": "Deployment Readiness",
+      "recommendation": "PASS",
+      "rationale": "AUC=0.7058. Industry thresholds: AUC\u22650.65, KS\u22650.20, Gini\u22650.30. Validation outcome: PASS.",
+      "confidence": 0.7058,
+      "risk": "low",
+      "requires_human_approval": true,
+      "approver": null,
+      "decision": null,
+      "decision_notes": null,
+      "timestamp": "2026-07-12T21:54:14.440924"
+    }
+  ],
+  "chart_paths": {
+    "chart4_target": "outputs\\charts\\RUN_20260712_215141\\chart4_target.png",
+    "chart7_univariate_auc": "outputs\\charts\\RUN_20260712_215141\\chart7_univariate_auc.png",
+    "chart8_iv_all": "outputs\\charts\\RUN_20260712_215141\\chart8_iv_all.png",
+    "chart9_correlation": "outputs\\charts\\RUN_20260712_215141\\chart9_correlation.png",
+    "chart11_roc": "outputs\\charts\\RUN_20260712_215141\\chart11_roc.png",
+    "chart14_calibration": "outputs\\charts\\RUN_20260712_215141\\chart14_calibration.png",
+    "chart17_decile": "outputs\\charts\\RUN_20260712_215141\\chart17_decile.png",
+    "chart23_fairness": "outputs\\charts\\RUN_20260712_215141\\chart23_fairness.png"
+  },
+  "warnings": [
+    {
+      "agent": "DataUnderstandingAgent",
+      "message": "LLM annotation skipped: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CcxUFBS1aTohcEzzpMWbn'}",
+      "timestamp": "2026-07-12T21:51:59.866089"
+    },
+    {
+      "agent": "DQRAgent",
+      "message": "LLM narrative skipped: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CcxUFhpsPx7Vm5edhrHT4'}",
+      "timestamp": "2026-07-12T21:52:07.006941"
+    },
+    {
+      "agent": "FeatureEngineeringAgent",
+      "message": "LLM feature summary skipped: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CcxUFvrCXXikmVUvVSFjE'}",
+      "timestamp": "2026-07-12T21:52:10.050143"
+    },
+    {
+      "agent": "VariableSelectionAgent",
+      "message": "LLM rationale skipped: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CcxUGag2dwAwHTJEdFPPR'}",
+      "timestamp": "2026-07-12T21:52:18.865414"
+    },
+    {
+      "agent": "ModelDevelopmentAgent",
+      "message": "LLM rationale skipped: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CcxUQL3vuvQfGfwPVohoP'}",
+      "timestamp": "2026-07-12T21:54:03.978572"
+    },
+    {
+      "agent": "ExplainabilityAgent",
+      "message": "LLM narrative skipped: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CcxUQhyYiuwxwcCHDktd6'}",
+      "timestamp": "2026-07-12T21:54:09.259432"
+    },
+    {
+      "agent": "ValidationAgent",
+      "message": "LLM summary skipped: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CcxUR6nVR9ejUAxkp8e5D'}",
+      "timestamp": "2026-07-12T21:54:14.440684"
+    }
+  ],
+  "errors": [],
+  "audit_log": [
+    {
+      "timestamp": "2026-07-12T21:51:41.723037",
+      "agent": "DataUnderstandingAgent",
+      "action": "started",
+      "detail": ""
+    },
+    {
+      "timestamp": "2026-07-12T21:51:50.826344",
+      "agent": "DataUnderstandingAgent",
+      "action": "data_loaded",
+      "detail": "192590 rows, 73 cols, headerless=False"
+    },
+    {
+      "timestamp": "2026-07-12T21:51:51.472216",
+      "agent": "DataUnderstandingAgent",
+      "action": "target_defined",
+      "detail": "Binary default flag derived from 'loan_status'. BAD (1): Charged Off, Does not meet the credit policy. Status:Charged Off, Default. GOOD (0): Fully Paid, Does not meet the credit policy. Status:Fully Paid. Default rate: 19.61%. Excluded indeterminate: 88,426 rows (45.9%). Final sample: 104,164 observations."
+    },
+    {
+      "timestamp": "2026-07-12T21:51:59.888202",
+      "agent": "DataUnderstandingAgent",
+      "action": "completed",
+      "detail": ""
+    },
+    {
+      "timestamp": "2026-07-12T21:51:59.890081",
+      "agent": "DQRAgent",
+      "action": "started",
+      "detail": ""
+    },
+    {
+      "timestamp": "2026-07-12T21:52:07.014958",
+      "agent": "DQRAgent",
+      "action": "completed",
+      "detail": ""
+    },
+    {
+      "timestamp": "2026-07-12T21:52:07.015519",
+      "agent": "FeatureEngineeringAgent",
+      "action": "started",
+      "detail": ""
+    },
+    {
+      "timestamp": "2026-07-12T21:52:09.646346",
+      "agent": "FeatureEngineeringAgent",
+      "action": "feature_engineering_complete",
+      "detail": "71 columns after engineering"
+    },
+    {
+      "timestamp": "2026-07-12T21:52:10.050294",
+      "agent": "FeatureEngineeringAgent",
+      "action": "completed",
+      "detail": ""
+    },
+    {
+      "timestamp": "2026-07-12T21:52:10.050927",
+      "agent": "VariableSelectionAgent",
+      "action": "started",
+      "detail": ""
+    },
+    {
+      "timestamp": "2026-07-12T21:52:18.920032",
+      "agent": "VariableSelectionAgent",
+      "action": "completed",
+      "detail": ""
+    },
+    {
+      "timestamp": "2026-07-12T21:52:18.942656",
+      "agent": "ModelDevelopmentAgent",
+      "action": "started",
+      "detail": ""
+    },
+    {
+      "timestamp": "2026-07-12T21:54:06.082455",
+      "agent": "ModelDevelopmentAgent",
+      "action": "completed",
+      "detail": ""
+    },
+    {
+      "timestamp": "2026-07-12T21:54:06.083023",
+      "agent": "ExplainabilityAgent",
+      "action": "started",
+      "detail": ""
+    },
+    {
+      "timestamp": "2026-07-12T21:54:09.259665",
+      "agent": "ExplainabilityAgent",
+      "action": "completed",
+      "detail": ""
+    },
+    {
+      "timestamp": "2026-07-12T21:54:09.260379",
+      "agent": "ValidationAgent",
+      "action": "started",
+      "detail": ""
+    },
+    {
+      "timestamp": "2026-07-12T21:54:14.440954",
+      "agent": "ValidationAgent",
+      "action": "completed",
+      "detail": ""
+    },
+    {
+      "timestamp": "2026-07-12T21:54:14.441624",
+      "agent": "DocumentationAgent",
+      "action": "started",
+      "detail": ""
+    }
+  ]
+}

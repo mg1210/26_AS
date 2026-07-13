@@ -24,6 +24,10 @@ for _d in ("data", "outputs", "outputs/models", "outputs/charts"):
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
 
+# On Streamlit Cloud, live pipeline execution is disabled; we serve a pre-computed
+# sample run from sample_results/ instead of outputs/.
+IS_CLOUD = os.path.exists('/mount/src')
+
 from core.data_loader import smart_read_csv  # header-aware loader shared with the pipeline
 
 st.set_page_config(page_title="Credit Risk Factory", layout="wide")
@@ -157,8 +161,10 @@ def _severity_cell_style(val):
 
 def load_latest_results():
     # Cloud-safe: a missing/empty outputs/ or a corrupt audit file must never crash the page.
+    # On Streamlit Cloud we serve the committed sample run instead of a live outputs/ folder.
+    _src = "sample_results" if IS_CLOUD else "outputs"
     try:
-        files = sorted(glob.glob("outputs/*_audit_trail.json"), reverse=True)
+        files = sorted(glob.glob(f"{_src}/*_audit_trail.json"), reverse=True)
         if not files:
             return None, ""
         with open(files[0], encoding="utf-8") as f:
@@ -174,7 +180,7 @@ def load_latest_results():
 
 
 def load_checkpoints():
-    path = "outputs/checkpoints.json"
+    path = ("sample_results/checkpoints.json" if IS_CLOUD else "outputs/checkpoints.json")
     try:
         if os.path.exists(path):
             with open(path, encoding="utf-8") as f:
@@ -491,6 +497,14 @@ st.session_state.setdefault("results", None)
 st.session_state.setdefault("report", "")
 st.session_state.setdefault("has_run", False)
 
+# On Streamlit Cloud, auto-load the committed sample run so the demo shows results immediately.
+if IS_CLOUD and not st.session_state.has_run:
+    _r, _rpt = load_latest_results()
+    if _r:
+        st.session_state.results = _r
+        st.session_state.report = _rpt
+        st.session_state.has_run = True
+
 # Threshold defaults (FIX 8) — set once so sliders render with correct values on first load
 st.session_state.setdefault("val_auc_threshold",  0.70)
 st.session_state.setdefault("val_ks_threshold",   0.25)
@@ -576,6 +590,10 @@ if page == "Home":
     col_run, col_results = st.columns(2)
 
     with col_run:
+        if IS_CLOUD:
+            st.info('This cloud demo displays the full documented pipeline run '
+                    '(104,164 rows, XGBoost champion, AUC=0.7071). Live execution is '
+                    'available by running locally — see README.')
         api_key = st.text_input("Anthropic API key", type="password",
                                 value=os.environ.get("ANTHROPIC_API_KEY", ""),
                                 placeholder="sk-ant-...")
@@ -600,7 +618,7 @@ if page == "Home":
             st.session_state.dataset1_path = dev_path
         trials = st.slider("Optuna trials", 5, 100, 20, key="trials_dev")
         run_btn = st.button("▶ Run Pipeline",
-                            disabled=not st.session_state.get("dataset1_path"),
+                            disabled=IS_CLOUD or not st.session_state.get("dataset1_path"),
                             use_container_width=True)
 
         if run_btn and st.session_state.get("dataset1_path"):
@@ -673,7 +691,7 @@ if page == "Home":
             st.success(f"✓ New data ready: {uploaded_new.name} ({uploaded_new.size/1e6:.1f} MB)")
 
         score_btn = st.button("▶ Score New Data",
-            disabled=not st.session_state.get("new_data_path") or not model_files,
+            disabled=IS_CLOUD or not st.session_state.get("new_data_path") or not model_files,
             use_container_width=True)
 
         if score_btn and st.session_state.get("new_data_path"):

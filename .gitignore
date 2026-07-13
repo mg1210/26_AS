@@ -24,6 +24,9 @@ data/*.parquet
 # Outputs — full directory excluded (contains run artefacts and audit trails)
 outputs/
 
+# Sample results — committed on purpose for the cloud demo (do NOT ignore)
+!sample_results/
+
 # API keys — never commit
 .streamlit/secrets.toml
 api_key.txt

@@ -1,0 +1,55 @@
+{
+  "cp1": {
+    "decision": "approved",
+    "analyst_notes": "",
+    "target_definition": "Binary default flag derived from 'loan_status'. BAD (1): Charged Off, Does not meet the credit policy. Status:Charged Off, Default. GOOD (0): Fully Paid, Does not meet the credit policy. Status:Fully Paid. Default rate: 19.61%. Excluded indeterminate: 88,426 rows (45.9%). Final sample: 104,164 observations.",
+    "timestamp": "2026-07-12T16:37:20.356590"
+  },
+  "dqr": {
+    "decision": "approved",
+    "analyst_notes": "",
+    "timestamp": "2026-06-30T06:07:50.354955"
+  },
+  "cp2": {
+    "decision": "approved",
+    "analyst_notes": "",
+    "approved_features": [
+      "int_rate_clean",
+      "loan_to_income",
+      "dti",
+      "annual_inc",
+      "revol_util",
+      "tot_cur_bal",
+      "loan_amnt",
+      "open_acc_ratio",
+      "verification_ordinal"
+    ],
+    "timestamp": "2026-07-12T16:37:47.964437"
+  },
+  "validation_thresholds": {
+    "auc_threshold": 0.63,
+    "ks_threshold": 0.2,
+    "gini_threshold": 0.29,
+    "psi_threshold": 0.1,
+    "analyst_name": "m",
+    "justification": "",
+    "timestamp": "2026-07-02T06:32:35.187862"
+  },
+  "iv_threshold": {
+    "iv_threshold": 0.02,
+    "analyst_name": "mohit",
+    "justification": "",
+    "timestamp": "2026-07-02T08:26:49.606473"
+  },
+  "cp3": {
+    "decision": "Approve for Deployment",
+    "analyst_name": "Mohit",
+    "sign_off_notes": "done",
+    "champion_model": "XGBoost",
+    "auc": 0.7058,
+    "ks": 0.299,
+    "gini": 0.4116,
+    "validation_passed": true,
+    "timestamp": "2026-07-12T17:38:05.646812"
+  }
+}

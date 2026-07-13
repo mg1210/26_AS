@@ -1,0 +1,10 @@
+======================================================================
+MODEL DEVELOPMENT DOCUMENT (text summary)
+======================================================================
+Run ID   : RUN_20260712_215141
+Dataset  : Loan_Data_Development.csv
+Champion : XGBoost
+AUC=0.7058  KS=0.299  Gini=0.4116  AUC_OOT=0.695
+Validation: PASS
+
+Full detail in the Word document and the three Excel companions.

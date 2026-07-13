@@ -1,0 +1,39 @@
+{
+  "run_id": "RUN_20260712_215141",
+  "champion_model": "XGBoost",
+  "champion_model_path": "outputs/models/RUN_20260712_215141_champion_XGBoost.pkl",
+  "selected_features": [
+    "int_rate_clean",
+    "loan_to_income",
+    "dti",
+    "annual_inc",
+    "revol_util",
+    "tot_cur_bal",
+    "loan_amnt",
+    "open_acc_ratio",
+    "verification_ordinal"
+  ],
+  "feature_dtypes": {
+    "int_rate_clean": "float64",
+    "loan_to_income": "float64",
+    "dti": "float64",
+    "annual_inc": "float64",
+    "revol_util": "float64",
+    "tot_cur_bal": "float64",
+    "loan_amnt": "int64",
+    "open_acc_ratio": "float64",
+    "verification_ordinal": "int64"
+  },
+  "target_column": "loan_status",
+  "target_mapping": {
+    "Current": null,
+    "Fully Paid": 0,
+    "Charged Off": 1,
+    "Late (31-120 days)": null,
+    "In Grace Period": null,
+    "Does not meet the credit policy. Status:Fully Paid": 0,
+    "Late (16-30 days)": null,
+    "Does not meet the credit policy. Status:Charged Off": 1,
+    "Default": 1
+  }
+}
