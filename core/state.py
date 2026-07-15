@@ -53,6 +53,7 @@ class PipelineState:
     feature_log: list = field(default_factory=list)         # what was created and why
     woe_bins: dict = field(default_factory=dict)            # WOE encoding maps
     imputation_log: list = field(default_factory=list)      # per-column imputation strategy + reason
+    imputation_map: dict = field(default_factory=dict)      # col -> {strategy, fill_value, reason} for Dataset 2 scoring
 
     # ── Phase 4: Variable selection ───────────────────────────────
     iv_table: Any = None                # DataFrame with IV scores
@@ -200,6 +201,7 @@ class PipelineState:
             "feature_log": _safe(self.feature_log) or [],
             "woe_bins":    _woe_safe(self.woe_bins),
             "imputation_log": _safe(self.imputation_log) or [],
+            "imputation_map": _safe(self.imputation_map) or {},
 
             # ── Phase 4: Variable selection ──────────────────────────
             "iv_table":         _df_safe(self.iv_table) or [],

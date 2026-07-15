@@ -309,6 +309,7 @@ class FeatureEngineeringAgent(BaseAgent):
         Low-missing standard numerics still use the median; strings use the mode.
         """
         imputation_log = []
+        imputation_map = {}   # exact per-column decision, persisted for Dataset 2 scoring
         n = len(df)
         for col in df.columns:
             if col == "target":
@@ -332,6 +333,8 @@ class FeatureEngineeringAgent(BaseAgent):
                 imputation_log.append({"Column": col, "Strategy": "Mode", "Value": str(fill_val),
                                        "Missing%": round(missing_pct * 100, 1),
                                        "Reason": "Most frequent category"})
+                imputation_map[col] = {"strategy": "mode", "fill_value": fill_val,
+                                       "reason": "Most frequent category"}
                 continue
 
             is_ratio_feature = any(kw in col.lower() for kw in ["ratio", "util", "pct", "rate"])
@@ -353,14 +356,20 @@ class FeatureEngineeringAgent(BaseAgent):
                 imputation_log.append({"Column": col, "Strategy": f"Sentinel ({sentinel})",
                                        "Value": sentinel, "Missing%": round(missing_pct * 100, 1),
                                        "Reason": reason})
+                imputation_map[col] = {"strategy": "sentinel", "fill_value": float(sentinel),
+                                       "reason": reason}
             else:
                 median_val = numeric_series.median()
                 df[col] = numeric_series.fillna(median_val)
                 imputation_log.append({"Column": col, "Strategy": "Median",
                                        "Value": round(float(median_val), 2) if pd.notna(median_val) else 0,
                                        "Missing%": round(missing_pct * 100, 1), "Reason": reason})
+                imputation_map[col] = {"strategy": "median",
+                                       "fill_value": float(median_val) if pd.notna(median_val) else 0.0,
+                                       "reason": reason}
 
         state.imputation_log = imputation_log
+        state.imputation_map = imputation_map
         _n_sent = sum(1 for r in imputation_log if "Sentinel" in r["Strategy"])
         _n_med = sum(1 for r in imputation_log if r["Strategy"] == "Median")
         _n_mode = sum(1 for r in imputation_log if r["Strategy"] == "Mode")

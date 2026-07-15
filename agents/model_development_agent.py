@@ -175,6 +175,14 @@ class ModelDevelopmentAgent(BaseAgent):
             model_path = f'outputs/models/{state.run_id}_champion_{state.champion_model_name}.pkl'
             joblib.dump(state.champion_model, model_path)
             state.champion_model_path = model_path
+
+            # Persist the exact training imputation decisions so Dataset 2 scoring can
+            # fill missing values identically (avoids train/serve skew from fillna(0)).
+            imputation_map_path = f'outputs/models/{state.run_id}_imputation_map.json'
+            with open(imputation_map_path, 'w') as _f:
+                _json.dump(state.imputation_map, _f, indent=2, default=str)
+            self._info(f"Imputation map saved ({len(state.imputation_map)} cols) → {imputation_map_path}")
+
             features_meta = {
                 'run_id': state.run_id,
                 'champion_model': state.champion_model_name,
@@ -184,6 +192,7 @@ class ModelDevelopmentAgent(BaseAgent):
                                    for f in state.selected_features if f in state.engineered_df.columns},
                 'target_column': state.target_column,
                 'target_mapping': getattr(state, 'target_mapping', {}),
+                'imputation_map_path': imputation_map_path,
             }
             meta_path = f'outputs/models/{state.run_id}_features_meta.json'
             with open(meta_path, 'w') as _f:
