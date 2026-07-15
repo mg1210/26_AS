@@ -38,11 +38,24 @@ def phase1_data_understanding(dataset_path, meta):
     numeric_count = sum(1 for fld in fields if fld.strip().replace('.', '').replace('-', '').lstrip('-').isdigit())
     has_header = numeric_count < len(fields) * 0.5
 
+    # alignment_verified=True only when columns are matched by real names (headered file).
+    # Headerless files fall back to positional assignment, which we've proven can silently
+    # produce garbage when the file's column order differs from Dataset 1 — so we flag them.
+    HEADERLESS_WARNING = (
+        'This file appears to have no column headers. Column order cannot be reliably '
+        'verified — for accurate scoring, please ensure this file has the same column '
+        'names as Dataset 1, or add a header row before uploading.'
+    )
     if has_header:
         df = pd.read_csv(dataset_path, low_memory=False)
         result['header_detected'] = True
+        result['alignment_verified'] = True
+        result['alignment_warning'] = ''
     else:
-        # Try to map from saved Dataset 1 column order
+        # Headerless: best-effort positional assignment, but flagged UNVERIFIED throughout.
+        result['header_detected'] = False
+        result['alignment_verified'] = False
+        result['alignment_warning'] = HEADERLESS_WARNING
         col_order_path = 'outputs/models/dataset1_column_order.json'
         if not os.path.exists(col_order_path):
             col_order_path = 'sample_results/dataset1_column_order.json'
@@ -52,15 +65,12 @@ def phase1_data_understanding(dataset_path, meta):
                 dataset1_cols = json.load(f)
             if len(dataset1_cols) == len(df.columns):
                 df.columns = dataset1_cols
-                result['header_detected'] = False
-                result['columns_assigned_from'] = 'Dataset 1 reference order'
+                result['columns_assigned_from'] = 'Dataset 1 reference order (UNVERIFIED — positional best-effort)'
             else:
                 df.columns = [f'col_{i}' for i in range(len(df.columns))]
-                result['header_detected'] = False
                 result['columns_assigned_from'] = 'auto-generated (count mismatch with Dataset 1)'
         else:
             df.columns = [f'col_{i}' for i in range(len(df.columns))]
-            result['header_detected'] = False
             result['columns_assigned_from'] = 'auto-generated (no reference found)'
 
     result['total_rows'] = len(df)
@@ -373,10 +383,21 @@ def run_dataset2_pipeline(dataset_path, run_id=None):
 
     p4 = phase4_validation(df, y_prob, meta)
 
+    # Propagate the column-alignment confidence so downstream consumers (UI) can flag
+    # unverified headerless scoring rather than presenting it as confident predictions.
+    alignment_verified = p1.get('alignment_verified', True)
+    scoring_confidence = ('VERIFIED' if alignment_verified
+                          else 'UNVERIFIED — column alignment could not be confirmed')
+    p3['prediction_status'] = scoring_confidence
+    p4['scoring_confidence'] = scoring_confidence
+
     combined = {
         'dataset2_run_id': f"D2_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
         'source_dataset1_run': meta.get('run_id'),
         'champion_model': meta['champion_model'],
+        'alignment_verified': alignment_verified,
+        'alignment_warning': p1.get('alignment_warning', ''),
+        'scoring_confidence': scoring_confidence,
         'phase1_data_understanding': p1,
         'phase2_data_quality': p2,
         'phase3_prediction': {k: v for k, v in p3.items() if k != 'predictions'},  # exclude raw array from summary
@@ -410,9 +431,19 @@ if __name__ == '__main__':
 
     result, path = run_dataset2_pipeline(args.dataset, args.run_id)
 
+    if not result.get('alignment_verified', True):
+        print("\n" + "!" * 60)
+        print("  ⚠  UNVERIFIED SCORING — COLUMN ALIGNMENT NOT CONFIRMED")
+        print("!" * 60)
+        print("  " + result.get('alignment_warning', ''))
+        print("  All predictions below are best-effort and should NOT be")
+        print("  treated as confident results.")
+        print("!" * 60)
+
     print(f"\nPhase 1 — Data Understanding: {result['phase1_data_understanding']['total_rows']:,} rows, "
           f"{result['phase1_data_understanding']['total_columns']} columns")
     print(f"  Header detected: {result['phase1_data_understanding']['header_detected']}")
+    print(f"  Alignment: {result.get('scoring_confidence')}")
     print(f"  Dictionary source: {result['phase1_data_understanding']['dictionary_source']}")
 
     print(f"\nPhase 2 — Data Quality (Scoped): {len(result['phase2_data_quality']['features_found'])} "
