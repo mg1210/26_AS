@@ -16,6 +16,14 @@ from agents.data_understanding_agent import DataUnderstandingAgent
 from agents.dqr_agent import DQRAgent
 from agents.feature_engineering_agent import FeatureEngineeringAgent
 
+# Matches dataset2_pipeline.py — headerless files fall back to positional column
+# assignment, which can silently produce garbage if the order differs from Dataset 1.
+HEADERLESS_WARNING = (
+    'This file appears to have no column headers. Column order cannot be reliably '
+    'verified — for accurate scoring, please ensure this file has the same column '
+    'names as Dataset 1, or add a header row before uploading.'
+)
+
 def load_latest_audit():
     files = sorted(glob.glob('outputs/*_audit_trail.json'), reverse=True)
     if not files:
@@ -52,9 +60,19 @@ def engineer_features_for_new_data(dataset_path, meta):
     # BEFORE feature engineering (which is name-based) so it can derive named features.
     # Positional assignment is deterministic; statistical fingerprint matching was
     # abandoned because credit-feature distributions overlap too much to be unique.
+    # By-name alignment (headered files) is confident; headerless positional assignment
+    # is best-effort and flagged UNVERIFIED throughout (matches dataset2_pipeline.py).
+    alignment_verified = True
     from core.data_loader import detect_headerless, smart_read_csv
     if detect_headerless(dataset_path):
-        print("Headerless data detected — assuming same column order as Dataset 1")
+        alignment_verified = False
+        print("\n" + "!" * 60)
+        print("  ⚠  UNVERIFIED SCORING — COLUMN ALIGNMENT NOT CONFIRMED")
+        print("!" * 60)
+        print("  " + HEADERLESS_WARNING)
+        print("  All predictions below are best-effort and should NOT be")
+        print("  treated as confident results.")
+        print("!" * 60)
         df_new, _ = smart_read_csv(dataset_path)
         col_order_path = 'outputs/models/dataset1_column_order.json'
         if os.path.exists(col_order_path):
@@ -121,7 +139,7 @@ def engineer_features_for_new_data(dataset_path, meta):
         y_new = state.engineered_df['target']
         print(f"  Target detected: {len(y_new):,} obs | Default rate: {y_new.mean():.2%}")
 
-    return X_new, y_new, missing
+    return X_new, y_new, missing, alignment_verified
 
 def compute_psi(ref_probs, new_probs, bins=10):
     breakpoints = np.percentile(ref_probs, np.linspace(0, 100, bins+1))
@@ -151,7 +169,9 @@ def main():
     print(f"Features       : {len(meta['selected_features'])}")
 
     # Engineer features from raw blind data (no mapping file needed)
-    X_new, y_new, missing_features = engineer_features_for_new_data(args.dataset, meta)
+    X_new, y_new, missing_features, alignment_verified = engineer_features_for_new_data(args.dataset, meta)
+    scoring_confidence = ('VERIFIED' if alignment_verified
+                          else 'UNVERIFIED — column alignment could not be confirmed')
 
     # Load champion model
     model_path = meta.get('champion_model_path', '')
@@ -166,6 +186,7 @@ def main():
     # Score
     y_prob = model.predict_proba(X_new)[:, 1]
     print(f"\nScoring complete: {len(y_prob):,} predictions")
+    print(f"Alignment: {scoring_confidence}")
     print(f"Score distribution: min={y_prob.min():.4f} | mean={y_prob.mean():.4f} | max={y_prob.max():.4f}")
 
     # Compute metrics if target available
@@ -174,6 +195,9 @@ def main():
         'scored_at': datetime.now().isoformat(),
         'total_records': len(y_prob),
         'missing_features': missing_features,
+        'alignment_verified': alignment_verified,
+        'scoring_confidence': scoring_confidence,
+        'alignment_warning': '' if alignment_verified else HEADERLESS_WARNING,
         'score_mean': round(float(y_prob.mean()), 4),
         'score_min': round(float(y_prob.min()), 4),
         'score_max': round(float(y_prob.max()), 4),
@@ -221,6 +245,13 @@ def main():
 
     print(f"Audit trail updated: {audit_path}")
     print(f"AUDIT_PATH:{audit_path}")
+
+    if not alignment_verified:
+        print("\n" + "!" * 60)
+        print("  ⚠  RESULTS ARE UNVERIFIED — column alignment could not be confirmed.")
+        print("  " + HEADERLESS_WARNING)
+        print("!" * 60)
+
     print(f"\n{'='*60}")
     print("SCORING COMPLETE — Reload Streamlit UI to see results")
     print(f"{'='*60}\n")
