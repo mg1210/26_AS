@@ -496,6 +496,8 @@ def show_ai_recommendation(data: dict, agent_name: str, page_recs: list = None):
 st.session_state.setdefault("results", None)
 st.session_state.setdefault("report", "")
 st.session_state.setdefault("has_run", False)
+st.session_state.setdefault("has_dataset2_results", False)
+st.session_state.setdefault("dataset2_results", {})
 
 # On Streamlit Cloud, auto-load the committed sample run so the demo shows results immediately.
 if IS_CLOUD and not st.session_state.has_run:
@@ -534,6 +536,35 @@ page = st.sidebar.radio("Navigate", [
     "👤 HITL Matrix",
     "📋 Model Sign-Off",
 ])
+
+# Main-nav radio selection takes precedence over the Dataset 2 button override:
+# when the radio value changes, drop any active D2 page override so the two
+# navigation mechanisms don't fight each other.
+if st.session_state.get("_last_main_nav") != page:
+    st.session_state._last_main_nav = page
+    st.session_state.pop("page", None)
+
+# Dataset 2 — blind scoring nav (only appears after a D2 workflow run)
+if st.session_state.get("has_dataset2_results"):
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("**DATASET 2 — BLIND SCORING**")
+    d2_pages = [
+        "📊 D2: Data Understanding",
+        "🔍 D2: Data Quality Review",
+        "🧩 D2: Feature Reconstruction",
+        "📉 D2: Feature Stability",
+        "💡 D2: Explainability",
+        "🎯 D2: Prediction",
+        "✅ D2: Validation",
+    ]
+    for p in d2_pages:
+        if st.sidebar.button(p, use_container_width=True, key=f"nav_{p}"):
+            st.session_state.page = p
+            st.rerun()
+
+# A Dataset 2 page override wins when active (set by the buttons above).
+if st.session_state.get("page"):
+    page = st.session_state.page
 
 if st.sidebar.button("Reload Latest Results"):
     r, rpt = load_latest_results()
@@ -731,6 +762,61 @@ if page == "Home":
                 st.error(f"Scoring failed (exit code {result.returncode})")
                 st.code((result.stdout or "")[-3000:])
                 st.code((result.stderr or "")[-3000:])
+
+        # ── Section 3 — Dataset 2 blind scoring (4-phase workflow) ─────
+        st.markdown("---")
+        st.subheader("Dataset 2 — Blind Scoring Workflow (4 Phases)")
+        st.caption("Upload Dataset 2 to run it through Data Understanding, Scoped Data Quality Review, Prediction, and Validation — using the fixed champion model from Dataset 1.")
+
+        model_files_d2 = sorted(glob.glob("outputs/models/*_champion_*.pkl"), reverse=True)
+        if not model_files_d2:
+            model_files_d2 = sorted(glob.glob("sample_results/models/*_champion_*.pkl"), reverse=True)
+
+        if model_files_d2:
+            st.success(f"✓ Champion model ready: {os.path.basename(model_files_d2[0])}")
+        else:
+            st.warning("⚠ No trained model found — run Dataset 1 pipeline first")
+
+        uploaded_d2 = st.file_uploader("Upload Dataset 2 (CSV)", type=["csv"], key="dataset2_workflow_upload")
+        if uploaded_d2:
+            import tempfile
+            tmp_dir = tempfile.mkdtemp()
+            d2_path = os.path.join(tmp_dir, uploaded_d2.name)
+            with open(d2_path, "wb") as f:
+                f.write(uploaded_d2.getbuffer())
+            st.success(f"✓ Dataset 2 ready: {uploaded_d2.name} ({uploaded_d2.size/1e6:.1f} MB)")
+            st.session_state.dataset2_workflow_path = d2_path
+
+        run_d2_btn = st.button("▶ Run Dataset 2 — 4 Phase Workflow",
+            disabled=not st.session_state.get("dataset2_workflow_path") or not model_files_d2 or IS_CLOUD,
+            use_container_width=True)
+
+        if IS_CLOUD:
+            st.caption("Disabled in cloud demo mode — run locally to use this workflow.")
+
+        if run_d2_btn and st.session_state.get("dataset2_workflow_path"):
+            with st.spinner("Running 4-phase Dataset 2 workflow..."):
+                cmd = [sys.executable, os.path.join(PROJECT_ROOT, "agents", "dataset2_pipeline.py"),
+                       "--dataset", st.session_state.dataset2_workflow_path]
+                result = subprocess.run(cmd, capture_output=True, text=True,
+                                        encoding="utf-8", errors="replace", cwd=PROJECT_ROOT,
+                                        env=dict(os.environ, PYTHONUTF8="1", PYTHONIOENCODING="utf-8"))
+            if result.returncode == 0:
+                st.success("✓ Dataset 2 workflow complete!")
+                st.code(result.stdout[-2000:])
+                audit_path = None
+                for line in result.stdout.split("\n"):
+                    if line.startswith("AUDIT_PATH:"):
+                        audit_path = line.replace("AUDIT_PATH:", "").strip()
+                if audit_path and os.path.exists(audit_path):
+                    with open(audit_path, encoding="utf-8") as f:
+                        st.session_state.dataset2_results = json.load(f)
+                    st.session_state.has_dataset2_results = True
+                st.rerun()
+            else:
+                st.error("Dataset 2 workflow failed")
+                st.code(result.stdout[-1500:])
+                st.code(result.stderr[-1500:])
 
     with col_results:
         st.subheader("Latest Results")
@@ -3470,3 +3556,194 @@ elif page == "📋 Model Sign-Off":
             else:
                 st.error(f"Model rejected by {analyst_name}.")
             st.rerun()
+
+elif page == "📊 D2: Data Understanding":
+    st.markdown("## Dataset 2 — Data Understanding")
+    st.caption("Schema profiling on the blind dataset — no target handling at this stage.")
+    d2 = st.session_state.get("dataset2_results", {})
+    p1 = d2.get("phase1_data_understanding", {})
+    if not p1:
+        st.info("Run the Dataset 2 workflow from the Home page first.")
+    else:
+        if p1.get("alignment_verified") is False:
+            st.error(f"⚠ {p1.get('alignment_warning', 'UNVERIFIED — column alignment could not be confirmed.')}")
+        else:
+            st.success("✓ Column alignment verified (header detected)")
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Rows", f"{p1.get('total_rows',0):,}")
+        c2.metric("Columns", p1.get("total_columns", 0))
+        c3.metric("Header Detected", "Yes" if p1.get("header_detected") else "No")
+        st.info(f"Business meaning source: {p1.get('dictionary_source','—')}")
+        schema = p1.get("schema", [])
+        if schema:
+            st.subheader("Schema Profile")
+            df_schema = pd.DataFrame(schema)
+            st.dataframe(df_schema, use_container_width=True, hide_index=True, height=350)
+            needed = df_schema[df_schema["is_expected_feature"] == True]
+            st.caption(f"{len(needed)} of {len(schema)} columns are features the champion model actually needs.")
+
+elif page == "🔍 D2: Data Quality Review":
+    st.markdown("## Dataset 2 — Data Quality Review (Scoped)")
+    st.caption("Quality review scoped ONLY to the features the champion model requires.")
+    d2 = st.session_state.get("dataset2_results", {})
+    p2 = d2.get("phase2_data_quality", {})
+    if not p2:
+        st.info("Run the Dataset 2 workflow from the Home page first.")
+    else:
+        c1, c2 = st.columns(2)
+        c1.metric("Features Found", len(p2.get("features_found", [])))
+        c2.metric("Features Missing", len(p2.get("features_missing", [])))
+        if p2.get("features_missing"):
+            st.warning(f"Missing: {p2['features_missing']}")
+        derived = p2.get("derived_features_log", [])
+        if derived:
+            st.subheader("Engineered Feature Reconstruction")
+            st.dataframe(pd.DataFrame(derived), use_container_width=True, hide_index=True)
+        quality_table = p2.get("quality_table", [])
+        if quality_table:
+            st.subheader("Feature Quality — Scoped to Champion Features")
+            st.dataframe(pd.DataFrame(quality_table), use_container_width=True, hide_index=True)
+
+elif page == "🧩 D2: Feature Reconstruction":
+    st.markdown("## Dataset 2 — Feature Reconstruction")
+    st.caption("Engineered features the champion needs, rebuilt from raw columns using training-exact formulas.")
+    d2 = st.session_state.get("dataset2_results", {})
+    p3 = d2.get("phase3_feature_reconstruction", {})
+    if not p3:
+        st.info("Run the Dataset 2 workflow from the Home page first.")
+    else:
+        if p3.get("alignment_verified") is False:
+            st.error(f"⚠ {p3.get('alignment_warning', 'UNVERIFIED — column alignment could not be confirmed.')}")
+        log = p3.get("derived_features_log", [])
+        n_recon = p3.get("n_reconstructed", sum(1 for d in log if d.get("status") == "Reconstructed"))
+        n_zero = sum(1 for d in log if d.get("status") == "Zero-imputed")
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Features Reconstructed", n_recon)
+        c2.metric("Features Zero-Imputed", n_zero)
+        c3.metric("Champion Features Available", f"{p3.get('n_available_after', '—')}")
+        if log:
+            st.subheader("Reconstruction Log")
+            st.dataframe(pd.DataFrame(log), use_container_width=True, hide_index=True)
+        if n_zero:
+            st.warning(f"{n_zero} feature(s) could not be derived from raw columns and were zero-imputed — predictions may be affected.")
+
+elif page == "📉 D2: Feature Stability":
+    st.markdown("## Dataset 2 — Feature Stability (PSI vs Training)")
+    st.caption("Population Stability Index per champion feature — Dataset 2 distribution vs the training reference. No target used.")
+    d2 = st.session_state.get("dataset2_results", {})
+    p4 = d2.get("phase4_feature_stability", {})
+    if not p4:
+        st.info("Run the Dataset 2 workflow from the Home page first.")
+    else:
+        if p4.get("alignment_verified") is False:
+            st.error(f"⚠ {p4.get('alignment_warning', 'UNVERIFIED — column alignment could not be confirmed.')}")
+        avg_psi = p4.get("avg_psi")
+        st.info(f"**Overall: {p4.get('overall_assessment','—')}**  ·  avg PSI = "
+                f"{avg_psi if avg_psi is not None else '—'}  ·  {p4.get('n_assessed',0)} of "
+                f"{len(p4.get('stability_table', []))} features assessed")
+        table = p4.get("stability_table", [])
+        if table:
+            order = ["feature", "ref_column", "d1_mean", "d2_mean", "mean_shift_pct", "psi", "stability_flag"]
+            df_stab = pd.DataFrame(table)
+            df_stab = df_stab[[c for c in order if c in df_stab.columns]]
+
+            def _flag_style(val):
+                colormap = {"STABLE": "#10b981", "SHIFTED": "#f59e0b", "HIGH DRIFT": "#ef4444"}
+                c = colormap.get(val, "")
+                return f"color:{c};font-weight:700" if c else ""
+
+            sty = df_stab.style
+            sty = (sty.map(_flag_style, subset=["stability_flag"]) if hasattr(sty, "map")
+                   else sty.applymap(_flag_style, subset=["stability_flag"]))
+            st.dataframe(sty, use_container_width=True, hide_index=True)
+            st.caption(p4.get("psi_note", ""))
+
+elif page == "💡 D2: Explainability":
+    st.markdown("## Dataset 2 — Explainability")
+    st.caption("Global feature importance for the Dataset 2 predictions, via SHAP on the champion model.")
+    d2 = st.session_state.get("dataset2_results", {})
+    p5 = d2.get("phase5_explainability", {})
+    if not p5:
+        st.info("Run the Dataset 2 workflow from the Home page first.")
+    else:
+        if p5.get("alignment_verified") is False:
+            st.error(f"⚠ {p5.get('alignment_warning', 'UNVERIFIED — column alignment could not be confirmed.')}")
+        _ss = p5.get("sample_size")
+        _ss_txt = f"{_ss:,}" if isinstance(_ss, int) else str(_ss)
+        st.info(f"Method: **{p5.get('method','—')}**  ·  sample size: {_ss_txt}")
+        imp = p5.get("feature_importance", [])
+        if imp:
+            imp_df = pd.DataFrame(imp)
+            col_a, col_b = st.columns([1, 1])
+            with col_a:
+                st.subheader("Importance Table")
+                st.dataframe(imp_df, use_container_width=True, hide_index=True)
+            with col_b:
+                st.subheader("Importance Chart")
+                chart_df = imp_df.sort_values("importance_pct", ascending=True)
+                fig = px.bar(chart_df, x="importance_pct", y="feature", orientation="h",
+                             template="plotly_dark", color="importance_pct",
+                             color_continuous_scale="Blues")
+                fig.update_layout(showlegend=False, height=400, coloraxis_showscale=False,
+                                  xaxis_title="Importance %", yaxis_title="")
+                st.plotly_chart(fig, use_container_width=True)
+
+elif page == "🎯 D2: Prediction":
+    st.markdown("## Dataset 2 — Prediction")
+    st.caption("Scoring every row using the fixed Dataset 1 champion model.")
+    d2 = st.session_state.get("dataset2_results", {})
+    p3 = d2.get("phase6_prediction", {})
+    if not p3:
+        st.info("Run the Dataset 2 workflow from the Home page first.")
+    else:
+        if d2.get("alignment_verified") is False:
+            st.error(f"⚠ {d2.get('alignment_warning','UNVERIFIED SCORING — column alignment could not be confirmed.')}")
+        else:
+            st.success("✓ Column alignment verified — scores are confident")
+        c1, c2, c3, c4, c5 = st.columns(5)
+        c1.metric("Champion Model", p3.get("champion_model", "—"))
+        c2.metric("Rows Scored", f"{p3.get('n_scored',0):,}")
+        c3.metric("Mean Score", p3.get("score_mean", "—"))
+        c4.metric("Median Score", p3.get("score_median", "—"))
+        c5.metric("High-Risk %", f"{p3.get('pct_high_risk',0)}%")
+        imputation_applied = p3.get("imputation_applied", [])
+        if imputation_applied:
+            with st.expander("Imputation Applied (training-exact map)"):
+                st.dataframe(pd.DataFrame(imputation_applied), use_container_width=True, hide_index=True)
+        bands = p3.get("risk_band_distribution", {})
+        if bands:
+            st.subheader("Risk Band Distribution")
+            band_df = pd.DataFrame(list(bands.items()), columns=["Risk Band", "Count"])
+            fig = px.bar(band_df, x="Risk Band", y="Count", template="plotly_dark",
+                        color="Risk Band", color_discrete_sequence=["#10b981","#3b82f6","#f59e0b","#ef4444","#991b1b"])
+            fig.update_layout(showlegend=False, height=350)
+            st.plotly_chart(fig, use_container_width=True)
+
+elif page == "✅ D2: Validation":
+    st.markdown("## Dataset 2 — Validation")
+    st.caption("Validation metrics — computed ONLY if a target column happens to be present in Dataset 2.")
+    d2 = st.session_state.get("dataset2_results", {})
+    p4 = d2.get("phase7_validation", {})
+    if not p4:
+        st.info("Run the Dataset 2 workflow from the Home page first.")
+    elif not p4.get("target_available"):
+        st.info(f"ℹ {p4.get('message', 'No target column available — true blind scoring scenario. Only prediction distribution is available (see Prediction phase).')}")
+    else:
+        st.success(f"✓ Target column found and used: {p4.get('target_column_used')}")
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("AUC", p4.get("auc", "—"))
+        c2.metric("KS", p4.get("ks", "—"))
+        c3.metric("Gini", p4.get("gini", "—"))
+        c4.metric("Brier Score", p4.get("brier_score", "—"))
+        cm = p4.get("confusion_matrix", {})
+        if cm:
+            st.subheader("Confusion Matrix & Classification")
+            cc1, cc2, cc3, cc4 = st.columns(4)
+            cc1.metric("Precision", cm.get("precision", "—"))
+            cc2.metric("Recall", cm.get("recall", "—"))
+            cc3.metric("F1 Score", cm.get("f1_score", "—"))
+            cc4.metric("Default Rate", f"{p4.get('default_rate',0)*100:.1f}%")
+            st.dataframe(pd.DataFrame([{
+                "True Positive": cm.get("true_positive"), "False Positive": cm.get("false_positive"),
+                "True Negative": cm.get("true_negative"), "False Negative": cm.get("false_negative"),
+            }]), use_container_width=True, hide_index=True)
