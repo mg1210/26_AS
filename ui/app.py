@@ -3726,24 +3726,62 @@ elif page == "✅ D2: Validation":
     p4 = d2.get("phase7_validation", {})
     if not p4:
         st.info("Run the Dataset 2 workflow from the Home page first.")
-    elif not p4.get("target_available"):
-        st.info(f"ℹ {p4.get('message', 'No target column available — true blind scoring scenario. Only prediction distribution is available (see Prediction phase).')}")
     else:
-        st.success(f"✓ Target column found and used: {p4.get('target_column_used')}")
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("AUC", p4.get("auc", "—"))
-        c2.metric("KS", p4.get("ks", "—"))
-        c3.metric("Gini", p4.get("gini", "—"))
-        c4.metric("Brier Score", p4.get("brier_score", "—"))
-        cm = p4.get("confusion_matrix", {})
-        if cm:
-            st.subheader("Confusion Matrix & Classification")
-            cc1, cc2, cc3, cc4 = st.columns(4)
-            cc1.metric("Precision", cm.get("precision", "—"))
-            cc2.metric("Recall", cm.get("recall", "—"))
-            cc3.metric("F1 Score", cm.get("f1_score", "—"))
-            cc4.metric("Default Rate", f"{p4.get('default_rate',0)*100:.1f}%")
-            st.dataframe(pd.DataFrame([{
-                "True Positive": cm.get("true_positive"), "False Positive": cm.get("false_positive"),
-                "True Negative": cm.get("true_negative"), "False Negative": cm.get("false_negative"),
-            }]), use_container_width=True, hide_index=True)
+        if p4.get("alignment_verified") is False:
+            st.error(f"⚠ {p4.get('alignment_warning', 'UNVERIFIED — column alignment could not be confirmed.')}")
+
+        # Overall RAG rating banner (only when a target was available for assessment)
+        rating = p4.get("overall_rating")
+        if p4.get("target_available") and rating in ("GREEN", "AMBER", "RED"):
+            _emoji = {"GREEN": "🟢", "AMBER": "🟠", "RED": "🔴"}[rating]
+            _fn = {"GREEN": st.success, "AMBER": st.warning, "RED": st.error}[rating]
+            _fn(f"### {_emoji} Overall Model Rating: {rating}")
+
+        # Score-level PSI (target-independent — shown for both blind and labelled files)
+        st.subheader("Score Stability (PSI vs Dataset 1)")
+        if p4.get("score_psi") is not None:
+            sp1, sp2, sp3 = st.columns(3)
+            sp1.metric("Score PSI", p4.get("score_psi"))
+            sp2.metric("Assessment", p4.get("score_psi_assessment", "—"))
+            sp3.metric("Reference", p4.get("score_psi_reference", "—"))
+        else:
+            st.caption(p4.get("score_psi_assessment", "No Dataset 1 reference scores available."))
+
+        if not p4.get("target_available"):
+            st.info(f"ℹ {p4.get('message', 'No target column available — true blind scoring scenario. Only prediction distribution is available (see Prediction phase).')}")
+        else:
+            st.success(f"✓ Target column found and used: {p4.get('target_column_used')}")
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("AUC", p4.get("auc", "—"))
+            c2.metric("KS", p4.get("ks", "—"))
+            c3.metric("Gini", p4.get("gini", "—"))
+            c4.metric("Brier Score", p4.get("brier_score", "—"))
+
+            rag = p4.get("rag_summary", {})
+            if rag:
+                st.subheader("KPI RAG (same thresholds as Dataset 1 scoreboard)")
+                rag_df = pd.DataFrame([{"KPI": k.upper(), "Value": v.get("value"), "RAG": v.get("rag")}
+                                       for k, v in rag.items()])
+
+                def _rag_style(val):
+                    cmap = {"GREEN": "#10b981", "AMBER": "#f59e0b", "RED": "#ef4444"}
+                    c = cmap.get(val, "")
+                    return f"color:{c};font-weight:700" if c else ""
+
+                sty = rag_df.style
+                sty = (sty.map(_rag_style, subset=["RAG"]) if hasattr(sty, "map")
+                       else sty.applymap(_rag_style, subset=["RAG"]))
+                st.dataframe(sty, use_container_width=True, hide_index=True)
+
+            cm = p4.get("confusion_matrix", {})
+            if cm:
+                st.subheader("Confusion Matrix & Classification")
+                cc1, cc2, cc3, cc4 = st.columns(4)
+                cc1.metric("Precision", cm.get("precision", "—"))
+                cc2.metric("Recall", cm.get("recall", "—"))
+                cc3.metric("F1 Score", cm.get("f1_score", "—"))
+                cc4.metric("Default Rate", f"{p4.get('default_rate',0)*100:.1f}%")
+                st.dataframe(pd.DataFrame([{
+                    "True Positive": cm.get("true_positive"), "False Positive": cm.get("false_positive"),
+                    "True Negative": cm.get("true_negative"), "False Negative": cm.get("false_negative"),
+                }]), use_container_width=True, hide_index=True)
