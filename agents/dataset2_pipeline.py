@@ -1,7 +1,18 @@
 """
-dataset2_pipeline.py — Blind Dataset 2 scoring workflow
-4 phases: Data Understanding → Data Quality Review (scoped) → Prediction → Validation (conditional)
-Never uses target column for anything except final validation, and only if present.
+dataset2_pipeline.py — Blind Dataset 2 scoring workflow (7 phases)
+
+Phase 1  Data Understanding      — schema, semantic types, business meanings, scope note
+Phase 2  Data Quality Review     — scoped to champion features: missing, cardinality, outliers, dups
+Phase 3  Feature Reconstruction  — derive engineered features from raw columns
+Phase 4  Feature Stability       — per-feature PSI vs the training reference distribution
+Phase 5  Explainability          — SHAP global importance on a sample (champion model)
+Phase 6  Prediction              — score every row with the fixed champion + training imputation map
+Phase 7  Validation              — metrics ONLY if a target column with valid mapped values is present
+
+IMPORTANT: the target column is NEVER used in Phases 1–6. Phase 7 is the only phase that
+looks for a target, and only computes metrics if one is found with valid mapped values.
+If the file is headerless, an ``alignment_verified=False`` flag and an UNVERIFIED warning
+are propagated through EVERY phase's result.
 """
 import pandas as pd
 import numpy as np
@@ -9,11 +20,14 @@ import json
 import os
 import glob
 import joblib
+import warnings
 from datetime import datetime
 
 
+# ── Shared loaders / helpers ────────────────────────────────────────────────
+
 def load_champion_meta(run_id=None):
-    """Load the fixed champion model + its feature list from Dataset 1's run."""
+    """Load the fixed champion model metadata + feature list from Dataset 1's run."""
     if run_id:
         path = f'outputs/models/{run_id}_features_meta.json'
     else:
@@ -27,97 +41,83 @@ def load_champion_meta(run_id=None):
         return json.load(f)
 
 
-def phase1_data_understanding(dataset_path, meta):
-    """Profile Dataset 2 — schema, semantic types, business meanings. No target handling."""
-    result = {'phase': 'Data Understanding', 'dataset': os.path.basename(dataset_path)}
+def load_champion_model(meta):
+    """Load the champion .pkl (meta path first, then newest matching in outputs/ or sample_results/)."""
+    model_path = meta.get('champion_model_path', '')
+    if not model_path or not os.path.exists(model_path):
+        candidates = sorted(glob.glob(f"outputs/models/*_{meta['champion_model']}.pkl"), reverse=True)
+        candidates += sorted(glob.glob(f"sample_results/models/*_{meta['champion_model']}.pkl"), reverse=True)
+        if not candidates:
+            raise FileNotFoundError("Champion model file not found")
+        model_path = candidates[0]
+    return joblib.load(model_path)
 
-    # Handle headerless CSVs — same detection logic as main pipeline
-    with open(dataset_path, 'r', encoding='utf-8', errors='replace') as f:
-        first_line = f.readline()
-    fields = first_line.strip().split(',')
-    numeric_count = sum(1 for fld in fields if fld.strip().replace('.', '').replace('-', '').lstrip('-').isdigit())
-    has_header = numeric_count < len(fields) * 0.5
 
-    # alignment_verified=True only when columns are matched by real names (headered file).
-    # Headerless files fall back to positional assignment, which we've proven can silently
-    # produce garbage when the file's column order differs from Dataset 1 — so we flag them.
-    HEADERLESS_WARNING = (
-        'This file appears to have no column headers. Column order cannot be reliably '
-        'verified — for accurate scoring, please ensure this file has the same column '
-        'names as Dataset 1, or add a header row before uploading.'
-    )
-    if has_header:
-        df = pd.read_csv(dataset_path, low_memory=False)
-        result['header_detected'] = True
-        result['alignment_verified'] = True
-        result['alignment_warning'] = ''
-    else:
-        # Headerless: best-effort positional assignment, but flagged UNVERIFIED throughout.
-        result['header_detected'] = False
-        result['alignment_verified'] = False
-        result['alignment_warning'] = HEADERLESS_WARNING
-        col_order_path = 'outputs/models/dataset1_column_order.json'
-        if not os.path.exists(col_order_path):
-            col_order_path = 'sample_results/dataset1_column_order.json'
-        df = pd.read_csv(dataset_path, header=None, low_memory=False)
-        if os.path.exists(col_order_path):
-            with open(col_order_path) as f:
-                dataset1_cols = json.load(f)
-            if len(dataset1_cols) == len(df.columns):
-                df.columns = dataset1_cols
-                result['columns_assigned_from'] = 'Dataset 1 reference order (UNVERIFIED — positional best-effort)'
+def load_imputation_map(meta):
+    """Load the exact training-time imputation decisions (col -> {strategy, fill_value})
+    so missing values are filled identically at scoring time (no train/serve skew)."""
+    path = meta.get('imputation_map_path', '')
+    if not path or not os.path.exists(path):
+        candidates = sorted(glob.glob('outputs/models/*_imputation_map.json'), reverse=True)
+        candidates += sorted(glob.glob('sample_results/models/*_imputation_map.json'), reverse=True)
+        if candidates:
+            path = candidates[0]
+    if path and os.path.exists(path):
+        with open(path, encoding='utf-8') as f:
+            return json.load(f)
+    return {}
+
+
+def load_reference_stats(meta):
+    """Load per-raw-column training distribution stats (mean/std/min/p25/p50/p75/max)."""
+    run_id = meta.get('run_id')
+    path = f"outputs/models/{run_id}_reference_stats.json" if run_id else ''
+    if not path or not os.path.exists(path):
+        cands = sorted(glob.glob('outputs/models/*_reference_stats.json'), reverse=True)
+        cands += sorted(glob.glob('sample_results/models/*_reference_stats.json'), reverse=True)
+        if cands:
+            path = cands[0]
+    if path and os.path.exists(path):
+        with open(path, encoding='utf-8') as f:
+            return json.load(f)
+    return {}
+
+
+def build_scoring_matrix(df, meta):
+    """Build the champion's input matrix X, filling missing cells with the EXACT training
+    imputation values (sentinel/median) from the persisted map. Shared by Phase 5
+    (explainability) and Phase 6 (prediction) so both see identical inputs.
+    Indexed on df.index so scalar (missing→value) and Series (found) assignments both get
+    the full row length (an empty frame would backfill early scalar columns to NaN)."""
+    expected_features = meta['selected_features']
+    imputation_map = load_imputation_map(meta)
+    X = pd.DataFrame(index=df.index)
+    imputation_applied = []
+    for feat in expected_features:
+        if feat in df.columns:
+            s = pd.to_numeric(df[feat], errors='coerce')
+            if feat in imputation_map:
+                fill_val = imputation_map[feat]['fill_value']
+                s = s.fillna(fill_val)
+                imputation_applied.append({'feature': feat, 'fill_value': fill_val,
+                                           'strategy': imputation_map[feat]['strategy']})
             else:
-                df.columns = [f'col_{i}' for i in range(len(df.columns))]
-                result['columns_assigned_from'] = 'auto-generated (count mismatch with Dataset 1)'
+                s = s.fillna(0)
+                imputation_applied.append({'feature': feat, 'fill_value': 0,
+                                           'strategy': 'default (no training map entry)'})
+            X[feat] = s
         else:
-            df.columns = [f'col_{i}' for i in range(len(df.columns))]
-            result['columns_assigned_from'] = 'auto-generated (no reference found)'
-
-    result['total_rows'] = len(df)
-    result['total_columns'] = df.shape[1]
-
-    # Business meanings: own data dict -> Dataset 1's dict as global fallback -> name inference
-    data_dict = {}
-    own_dict_files = glob.glob('data/*dataset2*dict*.xlsx') + glob.glob('data/*2*dictionary*.xlsx')
-    dict_source = None
-    if own_dict_files:
-        try:
-            dd = pd.read_excel(own_dict_files[0])
-            cols = dd.columns.tolist()
-            data_dict = dict(zip(dd[cols[0]].astype(str).str.lower().str.strip(), dd[cols[1]].astype(str)))
-            dict_source = f'Dataset 2 own dictionary ({own_dict_files[0]})'
-        except Exception:
-            pass
-    if not data_dict:
-        global_dict_files = glob.glob('data/*ictionary*.xlsx')
-        if global_dict_files:
-            try:
-                dd = pd.read_excel(global_dict_files[0])
-                cols = dd.columns.tolist()
-                data_dict = dict(zip(dd[cols[0]].astype(str).str.lower().str.strip(), dd[cols[1]].astype(str)))
-                dict_source = f'Dataset 1 dictionary used as global fallback ({global_dict_files[0]})'
-            except Exception:
-                pass
-    result['dictionary_source'] = dict_source or 'None found — using name inference'
-
-    # Schema profile
-    schema = []
-    for col in df.columns:
-        dtype = str(df[col].dtype)
-        missing_pct = df[col].isna().mean()
-        n_unique = df[col].nunique()
-        meaning = data_dict.get(col.lower(), '')
-        schema.append({
-            'column': col, 'dtype': dtype,
-            'missing_pct': round(missing_pct * 100, 2),
-            'n_unique': int(n_unique),
-            'business_meaning': meaning or '—',
-            'is_expected_feature': col in meta['selected_features'],
-        })
-    result['schema'] = schema
-    result['df'] = df  # kept in memory for next phase, not serialized
-
-    return result
+            # Feature genuinely missing entirely — use the training fill value as the best
+            # guess (not a blanket 0, which for a sentinel column would misroute the model).
+            if feat in imputation_map:
+                X[feat] = imputation_map[feat]['fill_value']
+                imputation_applied.append({'feature': feat, 'fill_value': imputation_map[feat]['fill_value'],
+                                           'strategy': 'entire column missing, used training fill value'})
+            else:
+                X[feat] = 0
+                imputation_applied.append({'feature': feat, 'fill_value': 0,
+                                           'strategy': 'entire column missing, no training reference'})
+    return X, imputation_applied
 
 
 def reconstruct_engineered_features(df, expected_features):
@@ -174,113 +174,350 @@ def reconstruct_engineered_features(df, expected_features):
     return df, derived_log
 
 
-def phase2_data_quality_scoped(df, meta, phase1_result):
-    """DQR scoped ONLY to the features the champion model actually needs."""
-    expected_features = meta['selected_features']
-    # Reconstruct engineered features from raw columns BEFORE the found/missing check,
-    # so derived features count as 'found' and are scored with real values (not zeros).
-    df, derived_log = reconstruct_engineered_features(df, expected_features)
-    result = {'phase': 'Data Quality Review (Scoped)', 'expected_features': expected_features,
-              'derived_features_log': derived_log}
+def _alignment_fields(phase1_result):
+    """Standard alignment flags propagated into every phase result."""
+    return {
+        'alignment_verified': phase1_result.get('alignment_verified', True),
+        'alignment_warning': phase1_result.get('alignment_warning', ''),
+    }
 
-    # Map columns — exact name match first (handles shuffled order naturally since we match by name)
+
+# ── Phase 1 — Data Understanding ────────────────────────────────────────────
+
+def phase1_data_understanding(dataset_path, meta):
+    """Profile Dataset 2 — schema, semantic types, business meanings. No target handling."""
+    result = {'phase': 'Data Understanding', 'dataset': os.path.basename(dataset_path)}
+
+    # Header detection — same logic as the main pipeline.
+    with open(dataset_path, 'r', encoding='utf-8', errors='replace') as f:
+        first_line = f.readline()
+    fields = first_line.strip().split(',')
+    numeric_count = sum(1 for fld in fields if fld.strip().replace('.', '').replace('-', '').lstrip('-').isdigit())
+    has_header = numeric_count < len(fields) * 0.5
+
+    # alignment_verified=True only when columns are matched by real names (headered file).
+    # Headerless files fall back to positional assignment, which can silently produce
+    # garbage when the file's column order differs from Dataset 1 — so we flag them.
+    HEADERLESS_WARNING = (
+        'This file appears to have no column headers. Column order cannot be reliably '
+        'verified — for accurate scoring, please ensure this file has the same column '
+        'names as Dataset 1, or add a header row before uploading.'
+    )
+    if has_header:
+        df = pd.read_csv(dataset_path, low_memory=False)
+        result['header_detected'] = True
+        result['alignment_verified'] = True
+        result['alignment_warning'] = ''
+    else:
+        # Headerless: best-effort positional assignment, but flagged UNVERIFIED throughout.
+        result['header_detected'] = False
+        result['alignment_verified'] = False
+        result['alignment_warning'] = HEADERLESS_WARNING
+        col_order_path = 'outputs/models/dataset1_column_order.json'
+        if not os.path.exists(col_order_path):
+            col_order_path = 'sample_results/dataset1_column_order.json'
+        df = pd.read_csv(dataset_path, header=None, low_memory=False)
+        if os.path.exists(col_order_path):
+            with open(col_order_path) as f:
+                dataset1_cols = json.load(f)
+            if len(dataset1_cols) == len(df.columns):
+                df.columns = dataset1_cols
+                result['columns_assigned_from'] = 'Dataset 1 reference order (UNVERIFIED — positional best-effort)'
+            else:
+                df.columns = [f'col_{i}' for i in range(len(df.columns))]
+                result['columns_assigned_from'] = 'auto-generated (count mismatch with Dataset 1)'
+        else:
+            df.columns = [f'col_{i}' for i in range(len(df.columns))]
+            result['columns_assigned_from'] = 'auto-generated (no reference found)'
+
+    result['total_rows'] = len(df)
+    result['total_columns'] = df.shape[1]
+
+    # Business meanings: Dataset 2's own dict -> Dataset 1's dict as GLOBAL fallback -> name inference
+    data_dict = {}
+    own_dict_files = glob.glob('data/*dataset2*dict*.xlsx') + glob.glob('data/*2*dictionary*.xlsx')
+    dict_source = None
+    if own_dict_files:
+        try:
+            dd = pd.read_excel(own_dict_files[0])
+            cols = dd.columns.tolist()
+            data_dict = dict(zip(dd[cols[0]].astype(str).str.lower().str.strip(), dd[cols[1]].astype(str)))
+            dict_source = f'Dataset 2 own dictionary ({own_dict_files[0]})'
+        except Exception:
+            pass
+    if not data_dict:
+        global_dict_files = glob.glob('data/*ictionary*.xlsx')
+        if global_dict_files:
+            try:
+                dd = pd.read_excel(global_dict_files[0])
+                cols = dd.columns.tolist()
+                data_dict = dict(zip(dd[cols[0]].astype(str).str.lower().str.strip(), dd[cols[1]].astype(str)))
+                dict_source = f'Dataset 1 dictionary used as global fallback ({global_dict_files[0]})'
+            except Exception:
+                pass
+    result['dictionary_source'] = dict_source or 'None found — using name inference'
+
+    # Semantic type inference per column (numeric / categorical / date / identifier)
+    semantic_types = []
+    for col in df.columns:
+        s = df[col]
+        if pd.api.types.is_numeric_dtype(s) or pd.to_numeric(s, errors='coerce').notna().mean() > 0.8:
+            n_unique = s.nunique()
+            sem_type = 'identifier' if n_unique / max(len(s), 1) > 0.95 else 'numeric'
+        else:
+            try:
+                with warnings.catch_warnings():
+                    warnings.simplefilter('ignore')
+                    pd.to_datetime(s.dropna().head(50), errors='raise')
+                sem_type = 'date'
+            except Exception:
+                sem_type = 'categorical'
+        semantic_types.append(sem_type)
+
+    # Schema profile with semantic types
+    schema = []
+    for col, sem_type in zip(df.columns, semantic_types):
+        schema.append({
+            'column': col, 'semantic_type': sem_type,
+            'dtype': str(df[col].dtype),
+            'missing_pct': round(df[col].isna().mean() * 100, 2),
+            'n_unique': int(df[col].nunique()),
+            'business_meaning': data_dict.get(col.lower(), '—'),
+            'is_expected_feature': col in meta['selected_features'],
+        })
+    result['schema'] = schema
+
+    # Selection bias reminder (informational only for Dataset 2)
+    result['scope_note'] = (
+        'This dataset is being scored using a model trained on funded/approved loans. '
+        'If Dataset 2 includes declined applicants, predictions for that subset carry '
+        'additional uncertainty (selection bias) not captured during training.'
+    )
+
+    result['df'] = df  # kept in memory for next phase, not serialized
+    return result
+
+
+# ── Phase 2 — Data Quality Review (scoped) ──────────────────────────────────
+
+def phase2_data_quality_scoped(df, meta, phase1_result):
+    """DQR scoped ONLY to the features the champion model needs — assessed on the raw
+    incoming data (engineered features are reconstructed later, in Phase 3)."""
+    expected_features = meta['selected_features']
+    result = {'phase': 'Data Quality Review (Scoped)', 'expected_features': expected_features}
+    result.update(_alignment_fields(phase1_result))
+
     available = [f for f in expected_features if f in df.columns]
     missing = [f for f in expected_features if f not in df.columns]
-
     result['features_found'] = available
     result['features_missing'] = missing
     result['mapping_method'] = 'Exact column name match'
 
-    # DQR only on the needed features
+    # Missing value + cardinality + summary stats per needed feature
     quality_rows = []
     for feat in expected_features:
         if feat in df.columns:
             s = pd.to_numeric(df[feat], errors='coerce')
             quality_rows.append({
-                'feature': feat,
-                'status': 'Found',
+                'feature': feat, 'status': 'Found',
                 'missing_pct': round(s.isna().mean() * 100, 2),
+                'n_unique': int(df[feat].nunique()),
                 'mean': round(float(s.mean()), 4) if s.notna().any() else None,
                 'std': round(float(s.std()), 4) if s.notna().any() else None,
                 'min': round(float(s.min()), 4) if s.notna().any() else None,
                 'max': round(float(s.max()), 4) if s.notna().any() else None,
             })
         else:
-            quality_rows.append({
-                'feature': feat, 'status': 'MISSING — will be imputed with 0',
-                'missing_pct': 100.0, 'mean': None, 'std': None, 'min': None, 'max': None,
-            })
+            quality_rows.append({'feature': feat, 'status': 'MISSING', 'missing_pct': 100.0,
+                                 'n_unique': None, 'mean': None, 'std': None, 'min': None, 'max': None})
     result['quality_table'] = quality_rows
-    result['df'] = df
+
+    # Outlier detection (IQR × 3) on needed numeric features that are present
+    outlier_rows = []
+    for feat in available:
+        s = pd.to_numeric(df[feat], errors='coerce').dropna()
+        if len(s) < 30:
+            continue
+        q1, q3 = s.quantile(0.25), s.quantile(0.75)
+        iqr = q3 - q1
+        lower, upper = q1 - 3 * iqr, q3 + 3 * iqr
+        n_outliers = int(((s < lower) | (s > upper)).sum())
+        outlier_rows.append({'feature': feat, 'iqr_outliers': n_outliers,
+                             'pct': round(n_outliers / len(s) * 100, 2)})
+    result['outlier_table'] = outlier_rows
+
+    # Duplicate check if an ID-like column exists
+    id_candidates = [c for c in df.columns if c.lower() in ('id', 'member_id', 'record_no', 'loan_id')]
+    dup_info = {}
+    for idc in id_candidates:
+        dup_info[idc] = int(df[idc].duplicated().sum())
+    result['duplicate_check'] = dup_info or {'note': 'No obvious ID column found to check duplicates'}
 
     return result
 
 
-def load_imputation_map(meta):
-    """Load the exact training-time imputation decisions (col -> {strategy, fill_value})
-    so missing values are filled identically at scoring time (no train/serve skew)."""
-    path = meta.get('imputation_map_path', '')
-    if not path or not os.path.exists(path):
-        candidates = sorted(glob.glob('outputs/models/*_imputation_map.json'), reverse=True)
-        candidates += sorted(glob.glob('sample_results/models/*_imputation_map.json'), reverse=True)
-        if candidates:
-            path = candidates[0]
-    if path and os.path.exists(path):
-        with open(path, encoding='utf-8') as f:
-            return json.load(f)
-    return {}
+# ── Phase 3 — Feature Reconstruction ────────────────────────────────────────
+
+def phase3_feature_reconstruction(df, meta, phase1_result):
+    """Derive the engineered features the champion needs from raw columns (Phase 2 assessed
+    raw availability; this phase builds the missing engineered ones with training-exact math)."""
+    result = {'phase': 'Feature Reconstruction'}
+    result.update(_alignment_fields(phase1_result))
+    df, derived_log = reconstruct_engineered_features(df, meta['selected_features'])
+    result['derived_features_log'] = derived_log
+    reconstructed = [d['feature'] for d in derived_log if d['status'] == 'Reconstructed']
+    result['n_reconstructed'] = len(reconstructed)
+    result['reconstructed_features'] = reconstructed
+    now_present = [f for f in meta['selected_features'] if f in df.columns]
+    result['features_available_after'] = now_present
+    result['n_available_after'] = len(now_present)
+    result['df'] = df
+    return result
 
 
-def phase3_prediction(df, meta):
-    """Score every row using the fixed champion model."""
-    result = {'phase': 'Prediction'}
-    expected_features = meta['selected_features']
-    imputation_map = load_imputation_map(meta)
+# ── Phase 4 — Feature Stability (PSI vs training) ───────────────────────────
 
-    # Index on df.index so scalar (missing→value) and Series (found) assignments both
-    # get the full row length. Starting from an empty frame lets an early missing
-    # feature create a 0-length column that later backfills to NaN when the frame
-    # expands — which NaN-intolerant models (e.g. GradientBoosting) then reject.
-    # Missing cells are filled with the EXACT training fill value (sentinel/median)
-    # from the persisted imputation map, matching how the champion was trained.
-    X = pd.DataFrame(index=df.index)
-    imputation_applied = []
-    for feat in expected_features:
-        if feat in df.columns:
-            s = pd.to_numeric(df[feat], errors='coerce')
-            if feat in imputation_map:
-                fill_val = imputation_map[feat]['fill_value']
-                s = s.fillna(fill_val)
-                imputation_applied.append({'feature': feat, 'fill_value': fill_val,
-                                           'strategy': imputation_map[feat]['strategy']})
-            else:
-                s = s.fillna(0)
-                imputation_applied.append({'feature': feat, 'fill_value': 0,
-                                           'strategy': 'default (no training map entry)'})
-            X[feat] = s
+def phase4_feature_stability(df, meta, phase1_result):
+    """Population Stability Index (PSI) per champion feature — Dataset 2 vs the training
+    reference distribution. Mirrors the Dataset 1 validation agent's PSI concept, applied
+    to feature distributions to detect covariate/population drift. Target is never used.
+
+    PSI is computed against the training percentile edges saved in reference_stats.json
+    (min/p25/p50/p75/max → 4 equal-mass training bins), so PSI = Σ(actual−0.25)·ln(actual/0.25)."""
+    result = {'phase': 'Feature Stability'}
+    result.update(_alignment_fields(phase1_result))
+    ref = load_reference_stats(meta)
+    # Engineered champion features map back to the raw column whose reference stats apply.
+    ref_key_for = {'int_rate_clean': 'int_rate'}
+
+    stability_rows = []
+    for feat in meta['selected_features']:
+        ref_key = feat if feat in ref else ref_key_for.get(feat)
+        present = feat in df.columns
+        d2_mean = None
+        if present:
+            s_all = pd.to_numeric(df[feat], errors='coerce').dropna()
+            if len(s_all):
+                d2_mean = round(float(s_all.mean()), 4)
+        d1_mean = round(float(ref[ref_key]['mean']), 4) if (ref_key and ref_key in ref) else None
+        row = {'feature': feat, 'ref_column': ref_key or '—',
+               'd1_mean': d1_mean, 'd2_mean': d2_mean, 'mean_shift_pct': None,
+               'psi': None, 'stability_flag': 'NO REFERENCE',
+               'assessment': 'No training reference available'}
+        if d1_mean is not None and d2_mean is not None and d1_mean != 0:
+            row['mean_shift_pct'] = round((d2_mean - d1_mean) / abs(d1_mean) * 100, 2)
+
+        if not ref_key or ref_key not in ref or not present:
+            stability_rows.append(row)
+            continue
+        rs = ref[ref_key]
+        edges = sorted(set([rs['min'], rs['p25'], rs['p50'], rs['p75'], rs['max']]))
+        if len(edges) < 3:
+            row['assessment'] = 'Degenerate reference (near-constant)'
+            stability_rows.append(row)
+            continue
+        s = pd.to_numeric(df[feat], errors='coerce').dropna()
+        if len(s) < 30:
+            row['assessment'] = 'Too few values to assess'
+            stability_rows.append(row)
+            continue
+        # Inner percentile edges with open ends so out-of-range D2 values still count.
+        inner = edges[1:-1]
+        bins = [-np.inf] + inner + [np.inf]
+        n_bins = len(bins) - 1
+        expected = np.full(n_bins, 1.0 / n_bins)          # equal-mass training bins by construction
+        actual = np.histogram(s, bins=bins)[0] / len(s)
+        expected = np.where(expected == 0, 1e-4, expected)
+        actual = np.where(actual == 0, 1e-4, actual)
+        psi = float(np.sum((actual - expected) * np.log(actual / expected)))
+        row['psi'] = round(psi, 4)
+        if psi < 0.10:
+            row['stability_flag'], row['assessment'] = 'STABLE', 'Stable (<0.10)'
+        elif psi < 0.25:
+            row['stability_flag'], row['assessment'] = 'SHIFTED', 'Moderate shift (0.10–0.25)'
         else:
-            # Feature genuinely missing entirely — use the training fill value as the
-            # best guess (not a blanket 0, which for a sentinel column would misroute).
-            if feat in imputation_map:
-                X[feat] = imputation_map[feat]['fill_value']
-                imputation_applied.append({'feature': feat, 'fill_value': imputation_map[feat]['fill_value'],
-                                           'strategy': 'entire column missing, used training fill value'})
-            else:
-                X[feat] = 0
-                imputation_applied.append({'feature': feat, 'fill_value': 0,
-                                           'strategy': 'entire column missing, no training reference'})
+            row['stability_flag'], row['assessment'] = 'HIGH DRIFT', 'Unstable (>0.25)'
+        stability_rows.append(row)
+    result['stability_table'] = stability_rows
 
+    assessed = [r for r in stability_rows if r['psi'] is not None]
+    if assessed:
+        avg = float(np.mean([r['psi'] for r in assessed]))
+        result['avg_psi'] = round(avg, 4)
+        result['overall_assessment'] = ('Stable' if avg < 0.10
+                                        else 'Moderate drift' if avg < 0.25
+                                        else 'Unstable — significant population drift')
+        result['n_assessed'] = len(assessed)
+    else:
+        result['avg_psi'] = None
+        result['overall_assessment'] = 'No features had training reference stats to assess'
+        result['n_assessed'] = 0
+    result['psi_note'] = ('Approximate PSI using saved training percentile edges (min/p25/p50/p75/max). '
+                          'Engineered ratio features without a raw reference are not assessed.')
+    return result
+
+
+# ── Phase 5 — Explainability (SHAP) ─────────────────────────────────────────
+
+def phase5_explainability(df, meta, phase1_result, sample_size=1000):
+    """Global feature importance via SHAP on a Dataset 2 sample using the champion model.
+    Mirrors the Dataset 1 explainability agent. Target is never used. Falls back to the
+    model's native importances / coefficients if SHAP is unavailable for the model type."""
+    result = {'phase': 'Explainability'}
+    result.update(_alignment_fields(phase1_result))
+
+    X, _ = build_scoring_matrix(df, meta)
+    model = load_champion_model(meta)
+    n = min(sample_size, len(X))
+    X_sample = X.sample(n=n, random_state=42) if len(X) > n else X
+
+    method = 'unavailable'
+    try:
+        import shap
+        explainer = shap.TreeExplainer(model)
+        sv = explainer.shap_values(X_sample)
+        if isinstance(sv, list):              # some versions return [class0, class1]
+            sv = sv[1] if len(sv) > 1 else sv[0]
+        sv = np.asarray(sv)
+        if sv.ndim == 3:                      # (n, features, classes)
+            sv = sv[:, :, -1]
+        mean_abs = np.abs(sv).mean(axis=0)
+        method = 'SHAP (TreeExplainer)'
+    except Exception as e:
+        result['shap_note'] = f'SHAP unavailable ({type(e).__name__}); used model importances'
+        if hasattr(model, 'feature_importances_'):
+            mean_abs = np.asarray(model.feature_importances_, dtype=float)
+            method = 'Model feature_importances_'
+        elif hasattr(model, 'coef_'):
+            mean_abs = np.abs(np.ravel(model.coef_)).astype(float)
+            method = 'Logistic |coef|'
+        else:
+            mean_abs = np.zeros(X_sample.shape[1])
+
+    feats = list(X_sample.columns)
+    total = float(np.sum(mean_abs)) or 1.0
+    importance = [{'feature': f, 'mean_abs_shap': round(float(v), 6),
+                   'importance_pct': round(100 * float(v) / total, 2)}
+                  for f, v in sorted(zip(feats, mean_abs), key=lambda t: t[1], reverse=True)]
+    result['method'] = method
+    result['sample_size'] = n
+    result['feature_importance'] = importance
+    result['top_features'] = [r['feature'] for r in importance[:5]]
+    return result
+
+
+# ── Phase 6 — Prediction ────────────────────────────────────────────────────
+
+def phase6_prediction(df, meta, phase1_result=None):
+    """Score every row using the fixed champion model + the training imputation map."""
+    result = {'phase': 'Prediction'}
+    if phase1_result is not None:
+        result.update(_alignment_fields(phase1_result))
+
+    X, imputation_applied = build_scoring_matrix(df, meta)
     result['imputation_applied'] = imputation_applied
 
-    model_path = meta.get('champion_model_path', '')
-    if not model_path or not os.path.exists(model_path):
-        candidates = sorted(glob.glob(f"outputs/models/*_{meta['champion_model']}.pkl"), reverse=True)
-        candidates += sorted(glob.glob(f"sample_results/models/*_{meta['champion_model']}.pkl"), reverse=True)
-        if not candidates:
-            raise FileNotFoundError("Champion model file not found")
-        model_path = candidates[0]
-
-    model = joblib.load(model_path)
+    model = load_champion_model(meta)
     y_prob = model.predict_proba(X)[:, 1]
 
     result['n_scored'] = len(y_prob)
@@ -292,18 +529,17 @@ def phase3_prediction(df, meta):
     result['score_max'] = round(float(y_prob.max()), 4)
     result['pct_high_risk'] = round(float((y_prob >= 0.5).mean() * 100), 2)
 
-    # Risk bands
     bands = pd.cut(y_prob, bins=[0, 0.2, 0.4, 0.6, 0.8, 1.0],
                    labels=['Very Low', 'Low', 'Medium', 'High', 'Very High'])
     result['risk_band_distribution'] = bands.value_counts().to_dict()
 
-    result['df'] = df
     result['y_prob'] = y_prob
-
     return result
 
 
-def phase4_validation(df, y_prob, meta):
+# ── Phase 7 — Validation (conditional) ──────────────────────────────────────
+
+def phase7_validation(df, y_prob, meta):
     """Validate ONLY if a target-like column exists. Never assumed."""
     result = {'phase': 'Validation', 'target_available': False}
 
@@ -367,29 +603,31 @@ def phase4_validation(df, y_prob, meta):
     return result
 
 
+# ── Orchestration ───────────────────────────────────────────────────────────
+
 def run_dataset2_pipeline(dataset_path, run_id=None):
-    """Orchestrates all 4 phases and saves combined results."""
+    """Orchestrates all 7 phases and saves combined results."""
     meta = load_champion_meta(run_id)
 
     p1 = phase1_data_understanding(dataset_path, meta)
     df = p1.pop('df')
 
-    p2 = phase2_data_quality_scoped(df, meta, p1)
-    df = p2.pop('df')
+    p2 = phase2_data_quality_scoped(df, meta, p1)                 # read-only (raw data)
+    p3 = phase3_feature_reconstruction(df, meta, p1)
+    df = p3.pop('df')                                            # now has engineered features
 
-    p3 = phase3_prediction(df, meta)
-    df = p3.pop('df')
-    y_prob = p3.pop('y_prob')
+    p4 = phase4_feature_stability(df, meta, p1)
+    p5 = phase5_explainability(df, meta, p1)
+    p6 = phase6_prediction(df, meta, p1)
+    y_prob = p6.pop('y_prob')
+    p7 = phase7_validation(df, y_prob, meta)
 
-    p4 = phase4_validation(df, y_prob, meta)
-
-    # Propagate the column-alignment confidence so downstream consumers (UI) can flag
-    # unverified headerless scoring rather than presenting it as confident predictions.
+    # Propagate alignment confidence for downstream consumers (UI).
     alignment_verified = p1.get('alignment_verified', True)
     scoring_confidence = ('VERIFIED' if alignment_verified
                           else 'UNVERIFIED — column alignment could not be confirmed')
-    p3['prediction_status'] = scoring_confidence
-    p4['scoring_confidence'] = scoring_confidence
+    p6['prediction_status'] = scoring_confidence
+    p7['scoring_confidence'] = scoring_confidence
 
     combined = {
         'dataset2_run_id': f"D2_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
@@ -400,8 +638,11 @@ def run_dataset2_pipeline(dataset_path, run_id=None):
         'scoring_confidence': scoring_confidence,
         'phase1_data_understanding': p1,
         'phase2_data_quality': p2,
-        'phase3_prediction': {k: v for k, v in p3.items() if k != 'predictions'},  # exclude raw array from summary
-        'phase4_validation': p4,
+        'phase3_feature_reconstruction': p3,
+        'phase4_feature_stability': p4,
+        'phase5_explainability': p5,
+        'phase6_prediction': {k: v for k, v in p6.items() if k != 'predictions'},  # exclude raw array
+        'phase7_validation': p7,
         'timestamp': datetime.now().isoformat(),
     }
 
@@ -410,7 +651,6 @@ def run_dataset2_pipeline(dataset_path, run_id=None):
     with open(out_path, 'w', encoding='utf-8') as f:
         json.dump(combined, f, indent=2, default=str)
 
-    # Save predictions separately (could be large)
     pred_path = f"outputs/dataset2/{combined['dataset2_run_id']}_predictions.csv"
     pd.DataFrame({'predicted_probability': y_prob}).to_csv(pred_path, index=False)
 
@@ -426,7 +666,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     print(f"\n{'='*60}")
-    print("DATASET 2 — 4-PHASE BLIND SCORING PIPELINE")
+    print("DATASET 2 — 7-PHASE BLIND SCORING PIPELINE")
     print(f"{'='*60}\n")
 
     result, path = run_dataset2_pipeline(args.dataset, args.run_id)
@@ -436,30 +676,60 @@ if __name__ == '__main__':
         print("  ⚠  UNVERIFIED SCORING — COLUMN ALIGNMENT NOT CONFIRMED")
         print("!" * 60)
         print("  " + result.get('alignment_warning', ''))
-        print("  All predictions below are best-effort and should NOT be")
-        print("  treated as confident results.")
+        print("  All results below are best-effort and should NOT be")
+        print("  treated as confident.")
         print("!" * 60)
 
-    print(f"\nPhase 1 — Data Understanding: {result['phase1_data_understanding']['total_rows']:,} rows, "
-          f"{result['phase1_data_understanding']['total_columns']} columns")
-    print(f"  Header detected: {result['phase1_data_understanding']['header_detected']}")
-    print(f"  Alignment: {result.get('scoring_confidence')}")
-    print(f"  Dictionary source: {result['phase1_data_understanding']['dictionary_source']}")
+    p1 = result['phase1_data_understanding']
+    print(f"\nPhase 1 — Data Understanding: {p1['total_rows']:,} rows, {p1['total_columns']} columns")
+    print(f"  Header detected: {p1['header_detected']} | Alignment: {result.get('scoring_confidence')}")
+    print(f"  Dictionary source: {p1['dictionary_source']}")
+    sem = {}
+    for s in p1['schema']:
+        sem[s['semantic_type']] = sem.get(s['semantic_type'], 0) + 1
+    print(f"  Semantic types: {sem}")
 
-    print(f"\nPhase 2 — Data Quality (Scoped): {len(result['phase2_data_quality']['features_found'])} "
-          f"of {len(result['phase2_data_quality']['expected_features'])} features found")
-    if result['phase2_data_quality']['features_missing']:
-        print(f"  Missing: {result['phase2_data_quality']['features_missing']}")
+    p2 = result['phase2_data_quality']
+    print(f"\nPhase 2 — Data Quality (Scoped): {len(p2['features_found'])} of "
+          f"{len(p2['expected_features'])} champion features present in raw data")
+    if p2['features_missing']:
+        print(f"  Not in raw data (reconstructed in Phase 3): {p2['features_missing']}")
+    n_out = sum(r['iqr_outliers'] for r in p2.get('outlier_table', []))
+    print(f"  Outliers (IQR×3) across present features: {n_out:,} | Duplicate check: {p2['duplicate_check']}")
 
-    print(f"\nPhase 3 — Prediction: {result['phase3_prediction']['n_scored']:,} scored | "
-          f"mean={result['phase3_prediction']['score_mean']} | "
-          f"high-risk={result['phase3_prediction']['pct_high_risk']}%")
+    p3 = result['phase3_feature_reconstruction']
+    print(f"\nPhase 3 — Feature Reconstruction: {p3['n_reconstructed']} engineered features rebuilt "
+          f"→ {p3['n_available_after']}/{len(p2['expected_features'])} champion features now available")
+    for d in p3['derived_features_log']:
+        print(f"    {d['feature']:<22} <- {d['derived_from']:<32} [{d['status']}]")
 
-    print(f"\nPhase 4 — Validation: target_available={result['phase4_validation']['target_available']}")
-    if result['phase4_validation']['target_available']:
-        print(f"  AUC={result['phase4_validation']['auc']} KS={result['phase4_validation']['ks']} "
-              f"Gini={result['phase4_validation']['gini']}")
+    p4 = result['phase4_feature_stability']
+    print(f"\nPhase 4 — Feature Stability (PSI vs training): {p4['overall_assessment']} "
+          f"(avg PSI={p4['avg_psi']}, {p4['n_assessed']} features assessed)")
+    for r in p4['stability_table']:
+        psi_txt = r['psi'] if r['psi'] is not None else '—'
+        print(f"    {r['feature']:<22} PSI={str(psi_txt):<8} {r['assessment']}")
+
+    p5 = result['phase5_explainability']
+    print(f"\nPhase 5 — Explainability ({p5['method']}, sample={p5['sample_size']:,}):")
+    for r in p5['feature_importance'][:5]:
+        print(f"    {r['feature']:<22} {r['importance_pct']:>6}%  (mean|SHAP|={r['mean_abs_shap']})")
+
+    p6 = result['phase6_prediction']
+    print(f"\nPhase 6 — Prediction: {p6['n_scored']:,} scored with {p6['champion_model']} | "
+          f"mean={p6['score_mean']} | median={p6['score_median']} | "
+          f"min={p6['score_min']} | max={p6['score_max']} | high-risk={p6['pct_high_risk']}%")
+    print(f"    Risk bands: {p6['risk_band_distribution']}")
+
+    p7 = result['phase7_validation']
+    print(f"\nPhase 7 — Validation: target_available={p7['target_available']}")
+    if p7['target_available']:
+        print(f"  Target column used: {p7['target_column_used']} | n_valid={p7['n_valid']:,}")
+        print(f"  AUC={p7['auc']} | KS={p7['ks']} | Gini={p7['gini']} | Brier={p7['brier_score']}")
+        cm = p7['confusion_matrix']
+        print(f"  Precision={cm['precision']} | Recall={cm['recall']} | F1={cm['f1_score']} | "
+              f"Default rate={p7['default_rate']}")
     else:
-        print(f"  {result['phase4_validation'].get('message', '')}")
+        print(f"  {p7.get('message', '')}")
 
     print(f"\nResults saved: {path}")
