@@ -183,6 +183,25 @@ class ModelDevelopmentAgent(BaseAgent):
                 _json.dump(state.imputation_map, _f, indent=2, default=str)
             self._info(f"Imputation map saved ({len(state.imputation_map)} cols) → {imputation_map_path}")
 
+            # Persist the champion's OOT (preferred) and Test predicted-score distributions so
+            # Dataset 2 scoring can compute a score-level PSI against the training reference.
+            reference_scores_path = f'outputs/models/{state.run_id}_reference_scores.json'
+            try:
+                ref_scores = {'run_id': state.run_id}
+                if getattr(state, 'X_oot', None) is not None:
+                    ref_scores['oot_scores'] = [round(float(v), 6) for v in
+                                                state.champion_model.predict_proba(state.X_oot)[:, 1]]
+                if getattr(state, 'X_test', None) is not None:
+                    ref_scores['test_scores'] = [round(float(v), 6) for v in
+                                                 state.champion_model.predict_proba(state.X_test)[:, 1]]
+                with open(reference_scores_path, 'w') as _f:
+                    _json.dump(ref_scores, _f)
+                self._info(f"Reference scores saved (OOT={'oot_scores' in ref_scores}, "
+                           f"Test={'test_scores' in ref_scores}) → {reference_scores_path}")
+            except Exception as _e:
+                reference_scores_path = ''
+                state.log_warning(self.name, f"Could not save reference scores: {_e}")
+
             features_meta = {
                 'run_id': state.run_id,
                 'champion_model': state.champion_model_name,
@@ -193,6 +212,7 @@ class ModelDevelopmentAgent(BaseAgent):
                 'target_column': state.target_column,
                 'target_mapping': getattr(state, 'target_mapping', {}),
                 'imputation_map_path': imputation_map_path,
+                'reference_scores_path': reference_scores_path,
             }
             meta_path = f'outputs/models/{state.run_id}_features_meta.json'
             with open(meta_path, 'w') as _f:

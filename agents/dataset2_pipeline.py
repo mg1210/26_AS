@@ -18,10 +18,15 @@ import pandas as pd
 import numpy as np
 import json
 import os
+import sys
 import glob
 import joblib
 import warnings
 from datetime import datetime
+
+# Ensure the project root is importable when run directly as `python agents/dataset2_pipeline.py`
+# (the script dir, agents/, is what lands on sys.path[0], so `import agents.*` would otherwise fail).
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 # ── Shared loaders / helpers ────────────────────────────────────────────────
@@ -81,6 +86,33 @@ def load_reference_stats(meta):
         with open(path, encoding='utf-8') as f:
             return json.load(f)
     return {}
+
+
+def load_reference_scores(meta):
+    """Load Dataset 1's champion predicted-score distributions (OOT + Test) for score PSI."""
+    path = meta.get('reference_scores_path', '')
+    if not path or not os.path.exists(path):
+        cands = sorted(glob.glob('outputs/models/*_reference_scores.json'), reverse=True)
+        cands += sorted(glob.glob('sample_results/models/*_reference_scores.json'), reverse=True)
+        if cands:
+            path = cands[0]
+    if path and os.path.exists(path):
+        with open(path, encoding='utf-8') as f:
+            return json.load(f)
+    return {}
+
+
+def compute_score_psi(d1_reference_scores, d2_scores, bins=10):
+    """Standard PSI formula comparing two score distributions."""
+    breakpoints = np.percentile(d1_reference_scores, np.linspace(0, 100, bins + 1))
+    breakpoints[0], breakpoints[-1] = -np.inf, np.inf
+    ref_pct = np.histogram(d1_reference_scores, bins=breakpoints)[0] / len(d1_reference_scores)
+    new_pct = np.histogram(d2_scores, bins=breakpoints)[0] / len(d2_scores)
+    ref_pct = np.where(ref_pct == 0, 1e-4, ref_pct)
+    new_pct = np.where(new_pct == 0, 1e-4, new_pct)
+    psi = float(np.sum((new_pct - ref_pct) * np.log(new_pct / ref_pct)))
+    assessment = 'Stable' if psi < 0.10 else 'Moderate shift' if psi < 0.25 else 'Significant shift'
+    return psi, assessment
 
 
 def build_scoring_matrix(df, meta):
@@ -274,13 +306,14 @@ def phase1_data_understanding(dataset_path, meta):
                 sem_type = 'categorical'
         semantic_types.append(sem_type)
 
-    # Schema profile with semantic types
+    # Schema profile with semantic types. NOTE: missing-value analysis (missing_pct) lives
+    # ONLY in Phase 2 (Data Quality Review), mirroring the DQR-owns-missing separation —
+    # Data Understanding describes structure/semantics, not data-quality metrics.
     schema = []
     for col, sem_type in zip(df.columns, semantic_types):
         schema.append({
             'column': col, 'semantic_type': sem_type,
             'dtype': str(df[col].dtype),
-            'missing_pct': round(df[col].isna().mean() * 100, 2),
             'n_unique': int(df[col].nunique()),
             'business_meaning': data_dict.get(col.lower(), '—'),
             'is_expected_feature': col in meta['selected_features'],
@@ -540,8 +573,26 @@ def phase6_prediction(df, meta, phase1_result=None):
 # ── Phase 7 — Validation (conditional) ──────────────────────────────────────
 
 def phase7_validation(df, y_prob, meta):
-    """Validate ONLY if a target-like column exists. Never assumed."""
+    """Score-level PSI (always) + discrimination metrics + RAG rating ONLY if a target
+    column with valid mapped values is present. The target is never assumed."""
     result = {'phase': 'Validation', 'target_available': False}
+
+    # ── Score-level PSI (target-independent): Dataset 2 scores vs Dataset 1 reference ──
+    ref_scores = load_reference_scores(meta)
+    d1_ref, ref_label = None, None
+    if ref_scores.get('oot_scores'):
+        d1_ref, ref_label = ref_scores['oot_scores'], 'Dataset 1 OOT'
+    elif ref_scores.get('test_scores'):
+        d1_ref, ref_label = ref_scores['test_scores'], 'Dataset 1 Test'
+    if d1_ref:
+        psi, assess = compute_score_psi(np.asarray(d1_ref, dtype=float), np.asarray(y_prob, dtype=float))
+        result['score_psi'] = round(psi, 4)
+        result['score_psi_assessment'] = assess
+        result['score_psi_reference'] = ref_label
+    else:
+        result['score_psi'] = None
+        result['score_psi_assessment'] = 'No Dataset 1 reference scores available (re-run training to persist them)'
+        result['score_psi_reference'] = None
 
     target_col_name = meta.get('target_column', 'loan_status')
     target_mapping = meta.get('target_mapping', {})
@@ -557,6 +608,7 @@ def phase7_validation(df, y_prob, meta):
 
     if found_col is None:
         result['message'] = 'No target column found in Dataset 2 — this is a true blind scoring scenario. Only prediction distribution is available.'
+        result['overall_rating'] = 'N/A — no target available for RAG assessment'
         return result
 
     # Map values using saved mapping
@@ -566,6 +618,7 @@ def phase7_validation(df, y_prob, meta):
 
     if valid_mask.sum() < 10:
         result['message'] = f'Target column "{found_col}" found but fewer than 10 valid mapped values — insufficient for validation metrics.'
+        result['overall_rating'] = 'N/A — no target available for RAG assessment'
         return result
 
     y_true = y_true_raw[valid_mask].astype(int).values
@@ -599,6 +652,20 @@ def phase7_validation(df, y_prob, meta):
         'precision': round(precision, 4), 'recall': round(recall, 4), 'f1_score': round(f1, 4),
     }
     result['default_rate'] = round(float(y_true.mean()), 4)
+
+    # ── RAG rating — reuse Dataset 1's exact KPI thresholds (no second hardcoded copy) ──
+    from agents.validation_agent import get_rag
+    rag_summary = {
+        'auc': {'value': result['auc'], 'rag': get_rag('auc', result['auc'])[0]},
+        'ks': {'value': result['ks'], 'rag': get_rag('ks', result['ks'])[0]},
+    }
+    if result.get('score_psi') is not None:
+        rag_summary['score_psi'] = {'value': result['score_psi'],
+                                    'rag': get_rag('psi', result['score_psi'])[0]}
+    result['rag_summary'] = rag_summary
+    rags = [v['rag'] for v in rag_summary.values()]
+    result['overall_rating'] = ('GREEN' if all(r == 'GREEN' for r in rags)
+                                else 'RED' if any(r == 'RED' for r in rags) else 'AMBER')
 
     return result
 
@@ -723,13 +790,19 @@ if __name__ == '__main__':
 
     p7 = result['phase7_validation']
     print(f"\nPhase 7 — Validation: target_available={p7['target_available']}")
+    print(f"  Score PSI: {p7.get('score_psi')} ({p7.get('score_psi_assessment')}) "
+          f"— reference: {p7.get('score_psi_reference')}")
     if p7['target_available']:
         print(f"  Target column used: {p7['target_column_used']} | n_valid={p7['n_valid']:,}")
         print(f"  AUC={p7['auc']} | KS={p7['ks']} | Gini={p7['gini']} | Brier={p7['brier_score']}")
         cm = p7['confusion_matrix']
         print(f"  Precision={cm['precision']} | Recall={cm['recall']} | F1={cm['f1_score']} | "
               f"Default rate={p7['default_rate']}")
+        for k, v in p7.get('rag_summary', {}).items():
+            print(f"    RAG {k:<10}: value={v['value']} → {v['rag']}")
+        print(f"  OVERALL RATING: {p7.get('overall_rating')}")
     else:
         print(f"  {p7.get('message', '')}")
+        print(f"  OVERALL RATING: {p7.get('overall_rating')}")
 
     print(f"\nResults saved: {path}")
