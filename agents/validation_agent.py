@@ -496,22 +496,33 @@ class ValidationAgent(BaseAgent):
 
     # ─────────────────────────────────────────────────────────────
     def _calibration(self, state: PipelineState) -> PipelineState:
+        # Single source of truth for Brier: reuse the uncalibrated Brier already computed in
+        # _calibration_analysis() (which runs earlier). There is now exactly ONE brier_score_loss
+        # computation in the pipeline, so validation_metrics['brier_score'] and
+        # calibration_results['uncalibrated']['brier'] are the SAME number by construction —
+        # not merely coincidentally equal. (Calibration error below is a distinct reliability-curve
+        # metric, not a Brier score.)
         model  = state.champion_model
         X_te   = state.X_test
         y_te   = state.y_test
 
-        y_prob = model.predict_proba(X_te)[:, 1]
-        brier  = brier_score_loss(y_te, y_prob)
+        brier = (state.calibration_results or {}).get("uncalibrated", {}).get("brier")
+        if brier is None and model is not None and X_te is not None:
+            # Fallback only if _calibration_analysis did not run (e.g. no champion at that point).
+            brier = round(float(brier_score_loss(y_te, model.predict_proba(X_te)[:, 1])), 4)
+
+        cal_error = None
         try:
+            y_prob = model.predict_proba(X_te)[:, 1]
             prob_true, prob_pred = calibration_curve(y_te, y_prob, n_bins=10)
             cal_error = float(np.mean(np.abs(prob_true - prob_pred)))
         except Exception:
             cal_error = None
 
-        state.validation_metrics["brier_score"] = round(brier, 4)
+        state.validation_metrics["brier_score"] = brier
         state.validation_metrics["calibration_error"] = round(cal_error, 4) if cal_error else None
-        self._info(f"Brier score={brier:.4f}  Calibration error={cal_error:.4f}" if cal_error else
-                   f"Brier score={brier:.4f}")
+        self._info(f"Brier score={brier}  Calibration error={cal_error:.4f}" if cal_error else
+                   f"Brier score={brier} (reused from calibration_results.uncalibrated)")
         return state
 
     # ─────────────────────────────────────────────────────────────
