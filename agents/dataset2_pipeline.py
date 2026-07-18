@@ -1,5 +1,5 @@
 """
-dataset2_pipeline.py — Blind Dataset 2 scoring workflow (7 phases)
+dataset2_pipeline.py — Blind Dataset 2 scoring workflow (8 phases)
 
 Phase 1  Data Understanding      — schema, semantic types, business meanings, scope note
 Phase 2  Data Quality Review     — scoped to champion features: missing, cardinality, outliers, dups
@@ -7,12 +7,13 @@ Phase 3  Feature Reconstruction  — derive engineered features from raw columns
 Phase 4  Feature Stability       — per-feature PSI vs the training reference distribution
 Phase 5  Explainability          — SHAP global importance on a sample (champion model)
 Phase 6  Prediction              — score every row with the fixed champion + training imputation map
-Phase 7  Validation              — metrics ONLY if a target column with valid mapped values is present
+Phase 7  Validation              — score PSI + metrics/RAG/decile ONLY if a valid target is present
+Phase 8  Fairness Check          — predicted-risk parity across proxy groups (target-independent)
 
-IMPORTANT: the target column is NEVER used in Phases 1–6. Phase 7 is the only phase that
-looks for a target, and only computes metrics if one is found with valid mapped values.
-If the file is headerless, an ``alignment_verified=False`` flag and an UNVERIFIED warning
-are propagated through EVERY phase's result.
+IMPORTANT: the target column is NEVER used except in Phase 7 (metrics), and only if one is
+found with valid mapped values. Phase 8 fairness examines predicted risk, not outcomes, so it
+runs regardless of target availability. If the file is headerless, an ``alignment_verified=False``
+flag and an UNVERIFIED warning are propagated through EVERY phase's result.
 """
 import pandas as pd
 import numpy as np
@@ -113,6 +114,31 @@ def compute_score_psi(d1_reference_scores, d2_scores, bins=10):
     psi = float(np.sum((new_pct - ref_pct) * np.log(new_pct / ref_pct)))
     assessment = 'Stable' if psi < 0.10 else 'Moderate shift' if psi < 0.25 else 'Significant shift'
     return psi, assessment
+
+
+def compute_decile_rank_order(y_true, y_prob, n_bins=10):
+    """Decile rank-ordering check — bad rate should fall monotonically from the
+    highest-risk decile to the lowest. Counts non-monotonic breaks."""
+    df_dec = pd.DataFrame({'y': y_true, 'p': y_prob})
+    df_dec['decile'] = pd.qcut(df_dec['p'], n_bins, labels=False, duplicates='drop')
+    decile_table = df_dec.groupby('decile').agg(
+        count=('y', 'size'),
+        bad_rate=('y', 'mean'),
+        mean_score=('p', 'mean')
+    ).reset_index().sort_values('decile', ascending=False)  # highest risk decile first
+    decile_table['decile_rank'] = range(1, len(decile_table) + 1)
+
+    breaks = 0
+    prev_rate = None
+    break_details = []
+    for _, row in decile_table.iterrows():
+        if prev_rate is not None and row['bad_rate'] > prev_rate:
+            breaks += 1
+            break_details.append(f"Decile {int(row['decile_rank'])}: bad_rate {row['bad_rate']:.4f} > previous {prev_rate:.4f}")
+        prev_rate = row['bad_rate']
+
+    assessment = 'Strong — fully monotonic' if breaks == 0 else f'{breaks} break(s) detected'
+    return decile_table.to_dict('records'), breaks, assessment, break_details
 
 
 def build_scoring_matrix(df, meta):
@@ -632,6 +658,9 @@ def phase7_validation(df, y_prob, meta):
     ks = float(np.max(tpr - fpr))
     brier = brier_score_loss(y_true, y_pred_prob)
 
+    # Decile rank-order (monotonicity) check
+    decile_table, n_breaks, rank_assessment, break_details = compute_decile_rank_order(y_true, y_pred_prob)
+
     y_pred_class = (y_pred_prob >= 0.5).astype(int)
     cm = confusion_matrix(y_true, y_pred_class)
     tn, fp, fn, tp = cm.ravel()
@@ -653,11 +682,22 @@ def phase7_validation(df, y_prob, meta):
     }
     result['default_rate'] = round(float(y_true.mean()), 4)
 
+    # Decile rank-order results
+    result['decile_table'] = decile_table
+    result['rank_order_breaks'] = n_breaks
+    result['rank_order_assessment'] = rank_assessment
+    result['rank_order_break_details'] = break_details
+
     # ── RAG rating — reuse Dataset 1's exact KPI thresholds (no second hardcoded copy) ──
     from agents.validation_agent import get_rag
     rag_summary = {
         'auc': {'value': result['auc'], 'rag': get_rag('auc', result['auc'])[0]},
         'ks': {'value': result['ks'], 'rag': get_rag('ks', result['ks'])[0]},
+    }
+    # Rank-order RAG matches validation_agent's pattern: 0 breaks GREEN, 1-2 AMBER, 3+ RED.
+    rag_summary['rank_order'] = {
+        'value': n_breaks,
+        'rag': 'GREEN' if n_breaks == 0 else 'AMBER' if n_breaks <= 2 else 'RED',
     }
     if result.get('score_psi') is not None:
         rag_summary['score_psi'] = {'value': result['score_psi'],
@@ -670,10 +710,56 @@ def phase7_validation(df, y_prob, meta):
     return result
 
 
+# ── Phase 8 — Fairness Check ────────────────────────────────────────────────
+
+def phase_fairness_check(df, y_prob, meta):
+    """Fairness re-check on the Dataset 2 scored population. Runs regardless of target
+    availability — it examines predicted risk across proxy groups, not actual outcomes."""
+    result = {'phase': 'Fairness Check (Dataset 2 Population)'}
+    proxy_attrs = ['verification_status', 'home_ownership', 'purpose', 'addr_state']
+
+    fairness_results = {}
+    for attr in proxy_attrs:
+        if attr not in df.columns:
+            continue
+        try:
+            df_fair = pd.DataFrame({'group': df[attr].values, 'predicted_prob': y_prob})
+            overall_mean = df_fair['predicted_prob'].mean()
+            group_stats = df_fair.groupby('group').agg(
+                count=('predicted_prob', 'size'),
+                mean_predicted=('predicted_prob', 'mean')
+            ).reset_index()
+            group_stats = group_stats[group_stats['count'] >= 30]
+            group_stats['diff_from_avg'] = group_stats['mean_predicted'] - overall_mean
+            group_stats['concern_level'] = group_stats['diff_from_avg'].abs().apply(
+                lambda d: 'High' if d > 0.15 else 'Medium' if d > 0.10 else 'Low'
+            )
+            fairness_results[attr] = {
+                row['group']: {
+                    'count': int(row['count']),
+                    'mean_predicted': round(float(row['mean_predicted']), 4),
+                    'diff_from_avg': round(float(row['diff_from_avg']), 4),
+                    'concern_level': row['concern_level'],
+                }
+                for _, row in group_stats.iterrows()
+            }
+        except Exception:
+            continue
+
+    total_flagged = sum(1 for attr_data in fairness_results.values()
+                        for v in attr_data.values() if v['concern_level'] in ('Medium', 'High'))
+    result['fairness_results'] = fairness_results
+    result['attributes_checked'] = len(fairness_results)
+    result['groups_flagged'] = total_flagged
+    result['summary'] = (f'{len(fairness_results)} proxy attributes checked on Dataset 2 population, '
+                         f'{total_flagged} group(s) flagged')
+    return result
+
+
 # ── Orchestration ───────────────────────────────────────────────────────────
 
 def run_dataset2_pipeline(dataset_path, run_id=None):
-    """Orchestrates all 7 phases and saves combined results."""
+    """Orchestrates all 8 phases and saves combined results."""
     meta = load_champion_meta(run_id)
 
     p1 = phase1_data_understanding(dataset_path, meta)
@@ -688,6 +774,8 @@ def run_dataset2_pipeline(dataset_path, run_id=None):
     p6 = phase6_prediction(df, meta, p1)
     y_prob = p6.pop('y_prob')
     p7 = phase7_validation(df, y_prob, meta)
+    p8 = phase_fairness_check(df, y_prob, meta)
+    p8.update(_alignment_fields(p1))                            # propagate alignment flag
 
     # Propagate alignment confidence for downstream consumers (UI).
     alignment_verified = p1.get('alignment_verified', True)
@@ -710,6 +798,7 @@ def run_dataset2_pipeline(dataset_path, run_id=None):
         'phase5_explainability': p5,
         'phase6_prediction': {k: v for k, v in p6.items() if k != 'predictions'},  # exclude raw array
         'phase7_validation': p7,
+        'phase8_fairness': p8,
         'timestamp': datetime.now().isoformat(),
     }
 
@@ -733,7 +822,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     print(f"\n{'='*60}")
-    print("DATASET 2 — 7-PHASE BLIND SCORING PIPELINE")
+    print("DATASET 2 — 8-PHASE BLIND SCORING PIPELINE")
     print(f"{'='*60}\n")
 
     result, path = run_dataset2_pipeline(args.dataset, args.run_id)
@@ -798,11 +887,19 @@ if __name__ == '__main__':
         cm = p7['confusion_matrix']
         print(f"  Precision={cm['precision']} | Recall={cm['recall']} | F1={cm['f1_score']} | "
               f"Default rate={p7['default_rate']}")
+        print(f"  Rank-order: {p7.get('rank_order_breaks')} break(s) — {p7.get('rank_order_assessment')}")
         for k, v in p7.get('rag_summary', {}).items():
             print(f"    RAG {k:<10}: value={v['value']} → {v['rag']}")
         print(f"  OVERALL RATING: {p7.get('overall_rating')}")
     else:
         print(f"  {p7.get('message', '')}")
         print(f"  OVERALL RATING: {p7.get('overall_rating')}")
+
+    p8 = result['phase8_fairness']
+    print(f"\nPhase 8 — Fairness Check: {p8.get('summary')}")
+    for attr, groups in p8.get('fairness_results', {}).items():
+        flagged = {g: v for g, v in groups.items() if v['concern_level'] in ('Medium', 'High')}
+        print(f"    {attr}: {len(groups)} group(s) checked"
+              + (f" | flagged: {list(flagged.keys())}" if flagged else " | all Low concern"))
 
     print(f"\nResults saved: {path}")
