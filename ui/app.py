@@ -1650,17 +1650,27 @@ elif page == "🔍 Data Quality Review":
                 st.dataframe(rv_df, use_container_width=True, hide_index=True)
 
                 # ── Per-column Cardinality Review (Accept / Change) ──────────
+                # Scope review to columns that actually need analyst attention: a detected
+                # conditional driver, or unexpected (unexplained) missingness. Sparse event
+                # fields and joint-N/A fields are already well-understood — shown in the table
+                # above but without per-row action buttons, to avoid review clutter.
+                def _needs_review(r):
+                    card = r["Cardinality Tested"]
+                    has_driver = card.startswith("Missing when")
+                    is_unexpected = (card == "None identified") and (r["Missing %"] > 5)
+                    return r["Missing Count"] > 0 and (has_driver or is_unexpected)
+
+                _review_cols = [r for r in review_rows if _needs_review(r)]
                 _cards = load_checkpoints().get("cardinality_reviews", {}).get("reviews", {})
-                with st.expander("🔎 Per-column Cardinality Review (Accept / Change)"):
-                    st.caption("Accept locks the detected condition as reviewed. Change refines the "
-                               "condition — the refinement is saved to checkpoints.json and re-applied "
-                               "on the next pipeline run (the UI has no raw data to recompute live).")
+                with st.expander(f"🔎 Per-column Cardinality Review — {len(_review_cols)} column(s) need attention (Accept / Change)"):
+                    st.caption("Only columns with a detected conditional driver or unexpected missingness "
+                               "are listed here. Accept locks the detected condition as reviewed; Change "
+                               "refines the condition — saved to checkpoints.json and re-applied on the next "
+                               "pipeline run (the UI has no raw data to recompute live).")
                     st.text_input("Analyst name (for review audit)", key="card_analyst")
                     _analyst = st.session_state.get("card_analyst", "").strip() or "analyst"
-                    for r in review_rows:
+                    for r in _review_cols:
                         col = r["Column"]
-                        if r["Missing Count"] == 0:
-                            continue
                         rev = _cards.get(col)
                         rc1, rc2, rc3, rc4 = st.columns([3, 4, 1, 1])
                         with rc1:
