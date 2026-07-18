@@ -3101,9 +3101,41 @@ elif page == "✅ Validation":
                 st.caption(f"Split: {psi.get('split_label', '')}")
 
         with _val_tabs[3]:  # Calibration
-            cal = vm.get("calibration", {})
-            if cal:
-                st.json(cal)
+            # Read live from the CURRENT loaded run's calibration_results (the same source the
+            # Model Development Document's calibration table uses) — never vm.brier_score, never
+            # cached. `data` already respects the restored-run vs live-run session distinction.
+            cal = data.get("calibration_results", {})
+            if cal and cal.get("uncalibrated"):
+                unc = cal.get("uncalibrated", {})
+                sig = cal.get("sigmoid", {})
+                iso = cal.get("isotonic", {})
+                recommended = cal.get("recommended_method", "")
+                unc_auc = unc.get("auc", vm.get("auc"))
+                cal_rows = [
+                    {"Variant": "Uncalibrated", "Brier": unc.get("brier"), "ECE": unc.get("ece"),
+                     "AUC": round(unc_auc, 4) if isinstance(unc_auc, (int, float)) else "—",
+                     "Recommended": ""},
+                    {"Variant": "Sigmoid (Platt)", "Brier": sig.get("brier"), "ECE": sig.get("ece"),
+                     "AUC": "unchanged",
+                     "Recommended": "✓ Recommended" if recommended == "sigmoid" else ""},
+                    {"Variant": "Isotonic", "Brier": iso.get("brier"), "ECE": iso.get("ece"),
+                     "AUC": "unchanged",
+                     "Recommended": "✓ Recommended" if recommended == "isotonic" else ""},
+                ]
+                cal_df = pd.DataFrame(cal_rows)
+
+                def _reco_row_style(row):
+                    is_reco = row["Recommended"] == "✓ Recommended"
+                    style = "font-weight:700;background-color:#10b98118" if is_reco else ""
+                    return [style] * len(row)
+
+                st.dataframe(cal_df.style.apply(_reco_row_style, axis=1),
+                             use_container_width=True, hide_index=True)
+                st.caption(f"Recommended method: **{recommended or '—'}** (lower ECE). "
+                           "AUC is invariant under monotonic calibration, hence 'unchanged'.")
+                if cal.get("ece_status"):
+                    st.caption(f"Uncalibrated ECE status: {cal['ece_status']} "
+                               f"(threshold {cal.get('ece_threshold', 0.02)})")
             else:
                 st.caption(f"Brier score: {brier:.4f}" if isinstance(brier, float) else "No calibration data.")
 
