@@ -15,6 +15,9 @@ Responsibilities:
 import os
 import json
 import random
+import hashlib
+import glob
+from datetime import datetime
 import pandas as pd
 import numpy as np
 from sklearn.linear_model import LogisticRegression
@@ -32,6 +35,13 @@ from core.base_agent import BaseAgent
 from core.state import PipelineState
 from core.llm import ask, CREDIT_RISK_SYSTEM
 from core.recommendation import Recommendation
+
+
+def compute_file_hash(path):
+    """SHA-256 of a file's bytes — used to detect whether the input dataset changed
+    between runs so an identical file reproduces an identical split configuration."""
+    with open(path, 'rb') as f:
+        return hashlib.sha256(f.read()).hexdigest()
 
 
 class ModelDevelopmentAgent(BaseAgent):
@@ -300,6 +310,7 @@ class ModelDevelopmentAgent(BaseAgent):
                     'time_col_used': time_col,
                     'note': 'OOT=latest 20% by issue_year. Train/Test=random stratified 70/30 within Dev 80%'
                 }
+                self._write_split_manifest(state, n, dev_idx, oot_idx, X_train, X_test)
                 self._info(f"3-way split: Train={len(X_train):,}(56%) | Test={len(X_test):,}(24%) | OOT={len(oot_idx):,}(20%)")
                 self._info(f"Default rates — Train:{y_train.mean():.2%} | Test:{y_test.mean():.2%} | OOT:{y_oot.mean():.2%}")
                 return state
@@ -315,6 +326,65 @@ class ModelDevelopmentAgent(BaseAgent):
         state.split_details = {'method': 'Random fallback 75/25', 'train_size': len(X_train), 'test_size': len(X_test)}
         self._info(f"Random fallback split: Train={len(X_train):,} | Test={len(X_test):,}")
         return state
+
+    # ─────────────────────────────────────────────────────────────
+    def _write_split_manifest(self, state, n, dev_idx, oot_idx, X_train, X_test):
+        """Write a reproducibility manifest for the split (seed, ratios, row counts, input
+        file hash). If a prior manifest exists for the same input-file hash + seed, log that
+        the split is being reused (identical); otherwise log a fresh split. Manifest info is
+        also folded into state.split_details so it flows to the audit trail automatically."""
+        try:
+            ds_path = state.dataset_path
+            file_hash = None
+            if ds_path and os.path.exists(ds_path):
+                file_hash = compute_file_hash(ds_path)
+
+            prior_match = None
+            for mp in glob.glob('outputs/models/*_split_manifest.json'):
+                try:
+                    with open(mp) as _mf:
+                        pm = json.load(_mf)
+                    if file_hash and pm.get('input_file_hash') == file_hash and pm.get('seed') == 42:
+                        prior_match = mp
+                        break
+                except Exception:
+                    continue
+            if prior_match:
+                self._info("Reusing verified split configuration — input file unchanged since last run "
+                           f"(matches {os.path.basename(prior_match)}); split will be identical.")
+            else:
+                self._info("New or modified input file detected — generating fresh split manifest.")
+
+            split_manifest = {
+                'seed': 42,
+                'oot_pct': 20,
+                'train_pct': 70,
+                'test_pct': 30,
+                'oot_method': 'time-based, latest 20% by issue_year',
+                'input_file': ds_path,
+                'input_file_hash': file_hash,
+                'row_counts': {
+                    'total': n,
+                    'dev_pool': len(dev_idx),
+                    'oot': len(oot_idx),
+                    'train': len(X_train),
+                    'test': len(X_test),
+                },
+                'generated_at': datetime.now().isoformat(),
+            }
+            os.makedirs('outputs/models', exist_ok=True)
+            manifest_path = f'outputs/models/{state.run_id}_split_manifest.json'
+            with open(manifest_path, 'w') as _mf:
+                json.dump(split_manifest, _mf, indent=2)
+            self._info(f"Split manifest saved → {manifest_path}")
+
+            # Fold key info into split_details (already flows to the audit trail).
+            state.split_details['seed'] = 42
+            state.split_details['input_file_hash'] = file_hash
+            state.split_details['split_manifest_path'] = manifest_path
+            state.split_details['split_reused'] = bool(prior_match)
+        except Exception as _e:
+            state.log_warning(self.name, f"Could not write split manifest: {_e}")
 
     # ─────────────────────────────────────────────────────────────
     def _metrics(self, model, X_tr, X_te, y_tr, y_te, name: str) -> dict:

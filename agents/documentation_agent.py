@@ -717,6 +717,11 @@ class DocumentationAgent(BaseAgent):
             dr = sd.get(dr_k)
             split_rows.append([label, f"{sz:,}", pct, f"{dr*100:.2f}%" if isinstance(dr, (int, float)) else "—"])
         table(["Set", "Size", "% of Total", "Default Rate"], split_rows or [["—", "—", "—", "—"]])
+        body("Random seed: 42 (fixed for reproducibility) | Split: OOT = latest 20% by issue_year "
+             "(deterministic) | Train/Test = 70/30 stratified random split within remaining 80% (seed=42)")
+        if sd.get("input_file_hash"):
+            body(f"Input file SHA-256: {sd['input_file_hash'][:16]}… (recorded in the split manifest; an "
+                 "unchanged input file reproduces an identical split).")
         if vm.get("auc_oot") is None and not sd.get("oot_size"):
             body("Note: OOT is required for full validation. Where no in-sample OOT is carved, "
                  "OOT is evaluated on blind Dataset 2 via evaluate_oot.py.")
