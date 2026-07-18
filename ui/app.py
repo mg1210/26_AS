@@ -498,6 +498,8 @@ st.session_state.setdefault("report", "")
 st.session_state.setdefault("has_run", False)
 st.session_state.setdefault("has_dataset2_results", False)
 st.session_state.setdefault("dataset2_results", {})
+st.session_state.setdefault("viewing_restored", False)
+st.session_state.setdefault("restored_results", None)
 
 # On Streamlit Cloud, auto-load the committed sample run so the demo shows results immediately.
 if IS_CLOUD and not st.session_state.has_run:
@@ -556,6 +558,7 @@ if st.session_state.get("has_dataset2_results"):
         "💡 D2: Explainability",
         "🎯 D2: Prediction",
         "✅ D2: Validation",
+        "⚖ D2: Fairness Check",
     ]
     for p in d2_pages:
         if st.sidebar.button(p, use_container_width=True, key=f"nav_{p}"):
@@ -592,7 +595,18 @@ with st.sidebar.expander("Current Thresholds"):
             st.session_state[k] = v
         st.rerun()
 
-data = st.session_state.results or {}
+# When viewing a restored (uploaded) audit trail, read from restored_results — NEVER
+# overwrite st.session_state.results, so the live run's data is never mutated by an upload.
+data = (st.session_state.restored_results if st.session_state.get("viewing_restored")
+        else st.session_state.results) or {}
+
+# Restored-mode banner — shown on EVERY page, before any page content renders.
+if st.session_state.get("viewing_restored"):
+    _rr = st.session_state.restored_results or {}
+    _rid = _rr.get("run_id", "unknown")
+    _rts = _rr.get("timestamp", "")
+    st.warning(f"📁 VIEWING RESTORED RUN: {_rid} (from {_rts[:19] if _rts else 'unknown time'}) — "
+               "this is NOT the current live run. Click 'Exit restored view' on the Audit Trail page to return.")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -3319,8 +3333,49 @@ elif page == "🔁 Audit Trail":
     st.title("Audit Trail")
     st.write("Complete log of all agent actions, decisions, warnings, and errors.")
 
-    if not st.session_state.has_run:
-        st.info("Run the pipeline first to see results.")
+    # ── Export & Restore ─────────────────────────────────────────────
+    st.subheader("Audit Trail — Export & Restore")
+    _live = st.session_state.results or {}
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.session_state.get("has_run") and _live:
+            st.download_button(
+                "⬇ Download Current Run's Audit Trail",
+                data=json.dumps(_live, indent=2, default=str),
+                file_name=f"{_live.get('run_id','audit')}_audit_trail.json",
+                mime="application/json",
+                key="dl_audit",
+            )
+        else:
+            st.caption("Run the pipeline to enable downloading the current run's audit trail.")
+    with col2:
+        uploaded_audit = st.file_uploader("⬆ Upload Previous Audit Trail to Restore",
+                                          type=["json"], key="restore_audit_upload")
+        if uploaded_audit:
+            try:
+                restored_data = json.loads(uploaded_audit.read())
+                required_keys = ["run_id", "champion_model_name", "model_metrics", "audit_log"]
+                missing_keys = [k for k in required_keys if k not in restored_data]
+                if missing_keys:
+                    st.error(f"Invalid audit trail — missing required fields: {missing_keys}. "
+                             "This may not be a Credit Risk Factory audit trail.")
+                else:
+                    st.session_state.restored_results = restored_data
+                    st.session_state.viewing_restored = True
+                    st.success(f"✓ Restored run: {restored_data.get('run_id')} — navigate pages to view it")
+                    st.rerun()
+            except json.JSONDecodeError:
+                st.error("Invalid JSON file — could not parse.")
+
+    if st.session_state.get("viewing_restored"):
+        if st.button("← Exit restored view, return to current run"):
+            st.session_state.viewing_restored = False
+            st.session_state.restored_results = None
+            st.rerun()
+    st.markdown("---")
+
+    if not st.session_state.has_run and not st.session_state.get("viewing_restored"):
+        st.info("Run the pipeline first to see results, or upload an audit trail above to restore one.")
         st.stop()
 
     show_run_context(data)
@@ -3785,3 +3840,49 @@ elif page == "✅ D2: Validation":
                     "True Positive": cm.get("true_positive"), "False Positive": cm.get("false_positive"),
                     "True Negative": cm.get("true_negative"), "False Negative": cm.get("false_negative"),
                 }]), use_container_width=True, hide_index=True)
+
+            decile_table = p4.get("decile_table", [])
+            if decile_table:
+                st.subheader("Score Decile Rank-Order Check")
+                rank_assessment = p4.get("rank_order_assessment", "—")
+                n_breaks = p4.get("rank_order_breaks", 0)
+                if n_breaks == 0:
+                    st.success(f"✓ {rank_assessment}")
+                else:
+                    st.warning(f"⚠ {rank_assessment}")
+                    for detail in p4.get("rank_order_break_details", []):
+                        st.caption(f"  {detail}")
+                dec_df = pd.DataFrame(decile_table)
+                st.dataframe(dec_df, use_container_width=True, hide_index=True)
+                fig = px.bar(dec_df, x="decile_rank", y="bad_rate", template="plotly_dark",
+                             labels={"decile_rank": "Decile (1=highest risk)", "bad_rate": "Bad Rate"},
+                             title="Default Rate by Decile")
+                fig.update_layout(height=350)
+                st.plotly_chart(fig, use_container_width=True)
+
+elif page == "⚖ D2: Fairness Check":
+    st.markdown("## Dataset 2 — Fairness Check")
+    st.caption("Predicted-risk parity check on the scored population — runs regardless of target availability.")
+    d2 = st.session_state.get("dataset2_results", {})
+    p8 = d2.get("phase8_fairness", {})
+    if not p8:
+        st.info("Run the Dataset 2 workflow from the Home page first.")
+    else:
+        if d2.get("alignment_verified") is False:
+            st.error(f"⚠ {d2.get('alignment_warning','UNVERIFIED — results below may not be reliable.')}")
+        c1, c2 = st.columns(2)
+        c1.metric("Attributes Checked", p8.get("attributes_checked", 0))
+        c2.metric("Groups Flagged", p8.get("groups_flagged", 0))
+        st.info(p8.get("summary", ""))
+
+        fairness_results = p8.get("fairness_results", {})
+        for attr, groups in fairness_results.items():
+            st.subheader(attr.replace("_", " ").title())
+            rows = [{"Group": g, **stats} for g, stats in groups.items()]
+            df_attr = pd.DataFrame(rows).sort_values("diff_from_avg", key=abs, ascending=False)
+            st.dataframe(df_attr, use_container_width=True, hide_index=True)
+            fig = px.bar(df_attr, x="Group", y="mean_predicted", template="plotly_dark",
+                         color="concern_level",
+                         color_discrete_map={"Low": "#10b981", "Medium": "#f59e0b", "High": "#ef4444"})
+            fig.update_layout(height=300, showlegend=True)
+            st.plotly_chart(fig, use_container_width=True)
