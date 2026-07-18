@@ -1626,15 +1626,12 @@ elif page == "🔍 Data Quality Review":
                 pct_d  = round(pct * 100, 1) if pct <= 1 else round(pct, 1)
                 col_info = schema_p.get(col, {})
                 dtype_s  = str(col_info.get("dtype", "unknown"))
-                cardinality = col_info.get("n_unique", "—")
-                is_sparse = any(kw in col.lower() for kw in sparse_keywords)
-                # Single categorical classification (replaces separate Expected/Unexpected columns)
-                if is_sparse:
-                    classification = "Expected (sparse field)"
-                elif pct_d > 5:
-                    classification = "Unexpected — investigate"
-                else:
-                    classification = "Normal"
+                # Cardinality-aware missingness fields computed by the DQR backend.
+                card_tested = v.get("cardinality_tested", "None identified") if isinstance(v, dict) else "None identified"
+                adj_cnt = v.get("missing_count_adjusted", n_miss) if isinstance(v, dict) else n_miss
+                adj_pct = v.get("missing_pct_adjusted", pct) if isinstance(v, dict) else pct
+                adj_pct_d = round(adj_pct * 100, 1) if adj_pct <= 1 else round(adj_pct, 1)
+                is_sparse = "sparse" in card_tested.lower() or any(kw in col.lower() for kw in sparse_keywords)
                 strat = "Median" if dtype_s not in ("object","str") and not dtype_s.startswith("string") else "Mode"
                 if is_sparse:
                     strat = "Sentinel (-999999)"
@@ -1643,26 +1640,69 @@ elif page == "🔍 Data Quality Review":
                     "Dtype":                 dtype_s,
                     "Missing Count":         n_miss,
                     "Missing %":             pct_d,
-                    "Cardinality":           cardinality,
-                    "Missing Classification": classification,
-                    "Current Strategy":      strat,
+                    "Missing Count adjusted for cardinality": adj_cnt,
+                    "Missing% adjusted for cardinality":      adj_pct_d,
+                    "Cardinality Tested":    card_tested,
+                    "Strategy for unexpected missing": strat,
                 })
             if review_rows:
                 rv_df = pd.DataFrame(review_rows)
+                st.dataframe(rv_df, use_container_width=True, hide_index=True)
 
-                def _cls_color(v):
-                    v = str(v)
-                    if v == "Normal":
-                        return "background-color:#10b98126;color:#10b981;font-weight:600"
-                    if v.startswith("Expected"):
-                        return "background-color:#3b82f626;color:#60a5fa;font-weight:600"
-                    if v.startswith("Unexpected"):
-                        return "background-color:#ef444426;color:#ef4444;font-weight:600"
-                    return ""
-                st.dataframe(
-                    rv_df.style.map(_cls_color, subset=["Missing Classification"]),
-                    use_container_width=True, hide_index=True,
-                )
+                # ── Per-column Cardinality Review (Accept / Change) ──────────
+                _cards = load_checkpoints().get("cardinality_reviews", {}).get("reviews", {})
+                with st.expander("🔎 Per-column Cardinality Review (Accept / Change)"):
+                    st.caption("Accept locks the detected condition as reviewed. Change refines the "
+                               "condition — the refinement is saved to checkpoints.json and re-applied "
+                               "on the next pipeline run (the UI has no raw data to recompute live).")
+                    st.text_input("Analyst name (for review audit)", key="card_analyst")
+                    _analyst = st.session_state.get("card_analyst", "").strip() or "analyst"
+                    for r in review_rows:
+                        col = r["Column"]
+                        if r["Missing Count"] == 0:
+                            continue
+                        rev = _cards.get(col)
+                        rc1, rc2, rc3, rc4 = st.columns([3, 4, 1, 1])
+                        with rc1:
+                            st.markdown(f"**{col}**")
+                            st.caption(f"{r['Missing %']}% → {r['Missing% adjusted for cardinality']}% adjusted")
+                        with rc2:
+                            st.caption(r["Cardinality Tested"])
+                            if rev:
+                                _icon = "🔒" if rev.get("status") == "accepted" else "✏"
+                                st.caption(f"{_icon} {rev.get('status')} by {rev.get('analyst','—')} "
+                                           f"({str(rev.get('timestamp',''))[:16]})")
+                        with rc3:
+                            if st.button("Accept", key=f"card_acc_{col}"):
+                                cur = load_checkpoints().get("cardinality_reviews", {}).get("reviews", {})
+                                cur[col] = {"status": "accepted",
+                                            "cardinality_tested": r["Cardinality Tested"],
+                                            "missing_count_adjusted": r["Missing Count adjusted for cardinality"],
+                                            "missing_pct_adjusted": r["Missing% adjusted for cardinality"],
+                                            "analyst": _analyst,
+                                            "timestamp": datetime.now().isoformat()}
+                                save_checkpoint("cardinality_reviews", {"reviews": cur})
+                                st.success(f"Locked '{col}' as reviewed.")
+                                st.rerun()
+                        with rc4:
+                            if st.button("Change", key=f"card_chg_{col}"):
+                                st.session_state[f"card_edit_{col}"] = not st.session_state.get(f"card_edit_{col}", False)
+                        if st.session_state.get(f"card_edit_{col}"):
+                            new_cond = st.text_input(
+                                "Refined condition (e.g. \"missing when application_type != 'JOINT'\")",
+                                value=r["Cardinality Tested"], key=f"card_cond_{col}")
+                            if st.button("Save refined condition", key=f"card_save_{col}"):
+                                cur = load_checkpoints().get("cardinality_reviews", {}).get("reviews", {})
+                                cur[col] = {"status": "changed",
+                                            "cardinality_tested": new_cond,
+                                            "missing_count_adjusted": r["Missing Count adjusted for cardinality"],
+                                            "missing_pct_adjusted": r["Missing% adjusted for cardinality"],
+                                            "analyst": _analyst,
+                                            "timestamp": datetime.now().isoformat()}
+                                save_checkpoint("cardinality_reviews", {"reviews": cur})
+                                st.session_state[f"card_edit_{col}"] = False
+                                st.success(f"Saved refined condition for '{col}' — will recompute next run.")
+                                st.rerun()
 
                 with st.expander("⚙ Override Imputation Strategies"):
                     st.caption("Override the default imputation strategy for any column. Saved to checkpoints.json.")
@@ -1674,7 +1714,7 @@ elif page == "🔍 Data Quality Review":
                         ov_cols = st.multiselect("Columns to override", cols_with_missing,
                                                  key="imp_ov_cols")
                         for oc in ov_cols:
-                            cur_strat = next((r["Current Strategy"] for r in review_rows if r["Column"] == oc), "Median (default)")
+                            cur_strat = next((r["Strategy for unexpected missing"] for r in review_rows if r["Column"] == oc), "Median (default)")
                             opt_idx   = next((i for i, o in enumerate(impute_opts) if cur_strat in o), 0)
                             chosen = st.selectbox(f"`{oc}` strategy", impute_opts,
                                                   index=opt_idx, key=f"imp_ov_{oc}")

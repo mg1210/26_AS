@@ -102,17 +102,104 @@ class DQRAgent(BaseAgent):
         return state
 
     # ─────────────────────────────────────────────────────────────
+    # Sparse event fields are expected to be missing when the event never occurred
+    # (mirrors the classification previously done in the UI).
+    SPARSE_KEYWORDS = ("mths_since", "bureau", "revol", "inq_", "pub_rec", "tax_lien",
+                       "derog", "_record", "collections", "il_util", "_il_", "_rv_")
+
+    def _detect_conditional_driver(self, df, M, drivers, driver_vals, min_subset=100):
+        """Test whether a column's missingness pattern is near-perfectly explained by another
+        categorical column's value (missing ⟺ driver == v, or missing ⟺ driver != v).
+
+        A genuine driver cleanly SEPARATES missing from present: the 'applicable' subset is
+        almost fully present (<10% missing) and the 'not-applicable' subset almost fully
+        missing (>90%). Requiring both subsets to be non-trivial rejects near-constant
+        drivers (e.g. policy_code, which is a spurious high-agreement match on base rate alone).
+        """
+        best = None
+        for d in drivers:
+            dv = driver_vals[d]
+            for v in dv.value_counts().index[:15]:
+                eq = (dv == v).values
+                # Two hypotheses: field present when d==v (missing⟺d!=v), or the reverse.
+                for cond_missing, applicable in ((f"{d} != '{v}'", eq),
+                                                 (f"{d} == '{v}'", ~eq)):
+                    n_app = int(applicable.sum())
+                    n_na = int(len(applicable) - n_app)
+                    if n_app < min_subset or n_na < min_subset:
+                        continue
+                    miss_app = float(M[applicable].mean())
+                    miss_na = float(M[~applicable].mean())
+                    if miss_app < 0.10 and miss_na > 0.90:
+                        score = miss_na - miss_app
+                        if best is None or score > best["score"]:
+                            applies_when = cond_missing.replace("!=", "==") if "!=" in cond_missing \
+                                else cond_missing.replace("==", "!=")
+                            best = {
+                                "driver": d, "value": str(v),
+                                "condition_missing": cond_missing, "applies_when": applies_when,
+                                "n_applicable": n_app,
+                                "missing_count_adjusted": int(M[applicable].sum()),
+                                "missing_pct_adjusted": round(miss_app, 4),
+                                "agreement": round(float((M == (~applicable)).mean()), 4),
+                                "score": round(score, 4),
+                            }
+        return best
+
     def _missing_analysis(self, state: PipelineState,
                           df: pd.DataFrame, cols: list) -> PipelineState:
         missing = {}
         high_missing = []
+
+        # Candidate categorical driver columns (low cardinality, not mostly-missing themselves).
+        drivers = [c for c in df.columns
+                   if df[c].nunique(dropna=True) <= 25 and float(df[c].isna().mean()) < 0.5]
+        driver_vals = {d: df[d].astype(str) for d in drivers}
+        n_joint_rows = 0
+        if "application_type" in df.columns:
+            n_joint_rows = int(df["application_type"].astype(str).str.upper().str.contains("JOINT").sum())
 
         for col in cols:
             if col not in df.columns:
                 continue
             n_miss  = int(df[col].isna().sum())
             pct     = float(n_miss / len(df))
-            missing[col] = {"n_missing": n_miss, "pct_missing": round(pct, 4)}
+            entry = {"n_missing": n_miss, "pct_missing": round(pct, 4)}
+
+            # ── Cardinality-aware missingness detection ──────────────
+            cardinality_tested = "None identified"
+            adj_count, adj_pct = n_miss, round(pct, 4)
+            is_joint = "joint" in col.lower()
+            is_sparse_name = any(kw in col.lower() for kw in self.SPARSE_KEYWORDS)
+
+            if n_miss > 0:
+                driver = None
+                # Only worth testing when missingness is partial (a driver can't separate
+                # a column that is 0% or ~100% missing).
+                if 0.01 < pct < 0.99:
+                    M = df[col].isna().values
+                    driver = self._detect_conditional_driver(df, M, drivers, driver_vals)
+
+                if driver:
+                    cardinality_tested = (f"Missing when {driver['condition_missing']} — field applies "
+                                          f"only when {driver['applies_when']} ({driver['n_applicable']:,} "
+                                          f"applicable rows, agreement {driver['agreement']})")
+                    adj_count = driver["missing_count_adjusted"]
+                    adj_pct = driver["missing_pct_adjusted"]
+                    entry["cardinality_driver"] = {k: driver[k] for k in
+                                                   ("driver", "value", "condition_missing",
+                                                    "applies_when", "n_applicable", "agreement")}
+                elif is_joint and pct > 0.99 and n_joint_rows == 0:
+                    cardinality_tested = ("N/A — 0 joint-application rows in dataset "
+                                          "(field applies only to joint applications)")
+                elif is_sparse_name:
+                    cardinality_tested = "N/A — sparse event field, no conditional driver"
+
+            entry["cardinality_tested"] = cardinality_tested
+            entry["missing_count_adjusted"] = adj_count
+            entry["missing_pct_adjusted"] = adj_pct
+            missing[col] = entry
+
             if pct > self.missing_threshold:
                 high_missing.append(col)
                 state.dqr_flags.append(
@@ -124,6 +211,8 @@ class DQRAgent(BaseAgent):
         state.dqr_report["missing"] = missing
 
         self._info(f"Columns with >{self.missing_threshold:.0%} missing: {len(high_missing)}")
+        _n_driver = sum(1 for v in missing.values() if v.get("cardinality_driver"))
+        self._info(f"Cardinality-aware missingness: {_n_driver} column(s) with a conditional driver detected")
         if high_missing:
             self._info(f"  → {high_missing}")
         return state
