@@ -809,7 +809,24 @@ if page == "Home":
             st.caption("Disabled in cloud demo mode — run locally to use this workflow.")
 
         if run_d2_btn and st.session_state.get("dataset2_workflow_path"):
-            with st.spinner("Running 4-phase Dataset 2 workflow..."):
+            # Detect headerless up-front (same two-row heuristic as the pipeline) so we can warn
+            # that a headerless file triggers a full statistical column scan (can take minutes).
+            _d2_headerless = False
+            try:
+                def _numfrac(line):
+                    f = line.strip().split(",")
+                    if not f:
+                        return 0.0
+                    return sum(1 for x in f if x.strip().replace(".", "").replace("-", "").lstrip("-").isdigit()) / len(f)
+                with open(st.session_state.dataset2_workflow_path, encoding="utf-8", errors="replace") as _fh:
+                    _l0, _l1 = _fh.readline(), _fh.readline()
+                _d2_headerless = (_numfrac(_l1) - _numfrac(_l0)) <= 0.20 if _l1.strip() else _numfrac(_l0) >= 0.5
+            except Exception:
+                _d2_headerless = False
+            _spin_msg = ("Running full statistical column scan on headerless file — this may take "
+                         "several minutes for large files." if _d2_headerless
+                         else "Running 8-phase Dataset 2 workflow...")
+            with st.spinner(_spin_msg):
                 cmd = [sys.executable, os.path.join(PROJECT_ROOT, "agents", "dataset2_pipeline.py"),
                        "--dataset", st.session_state.dataset2_workflow_path]
                 result = subprocess.run(cmd, capture_output=True, text=True,
