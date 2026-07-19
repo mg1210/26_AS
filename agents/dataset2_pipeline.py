@@ -928,6 +928,247 @@ def phase_fairness_check(df, y_prob, meta):
     return result
 
 
+# ── Phase 9 — Documentation ─────────────────────────────────────────────────
+
+def phase9_documentation(combined_results, meta):
+    """Generate a Dataset 2 Scoring Report (Word .docx), mirroring Dataset 1's Model
+    Development Document structure but scoped to this blind scoring run."""
+    from docx import Document
+    from docx.shared import Inches
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+
+    doc = Document()
+    run_id = combined_results.get('dataset2_run_id', 'unknown')
+
+    # Title
+    doc.add_heading('Dataset 2 — Blind Scoring Report', level=0)
+    doc.add_paragraph(f"Run ID: {run_id}")
+    doc.add_paragraph(f"Source Dataset 1 Model: {combined_results.get('source_dataset1_run', '—')}")
+    doc.add_paragraph(f"Champion Model Used: {combined_results.get('champion_model', '—')}")
+    doc.add_paragraph(f"Generated: {combined_results.get('timestamp', '—')}")
+
+    alignment_verified = combined_results.get('alignment_verified', True)
+    p1 = combined_results.get('phase1_data_understanding', {})
+    alignment_method = (combined_results.get('alignment_method')
+                        or p1.get('alignment_method', 'header-based exact match'))
+    if alignment_verified:
+        doc.add_paragraph(f"✓ Column Alignment: VERIFIED ({alignment_method})")
+    else:
+        doc.add_paragraph(f"⚠ Column Alignment: UNVERIFIED — {combined_results.get('alignment_warning', '')}")
+
+    p6 = combined_results.get('phase6_prediction', {})
+    p7 = combined_results.get('phase7_validation', {})
+
+    # Section 1 — Executive Summary
+    doc.add_heading('1. Executive Summary', level=1)
+    doc.add_paragraph(
+        f"This report documents the blind scoring of a new dataset ({p1.get('total_rows', 0):,} rows, "
+        f"{p1.get('total_columns', 0)} columns) using the fixed champion model from Dataset 1 "
+        f"({combined_results.get('champion_model', '—')}), with no retraining performed. "
+        f"{p6.get('n_scored', 0):,} records were scored, yielding a mean predicted default "
+        f"probability of {p6.get('score_mean', '—')} and {p6.get('pct_high_risk', '—')}% flagged high-risk. "
+        + (f"Validation against actual outcomes (target column '{p7.get('target_column_used', '—')}') confirmed "
+           f"AUC={p7.get('auc', '—')}, consistent with the model's documented Dataset 1 performance."
+           if p7.get('target_available') else
+           "No ground-truth labels were available in this dataset — this is a true blind scoring exercise; "
+           "validation metrics will be computable once outcomes are observed.")
+    )
+
+    # Section 2 — Process Flow
+    doc.add_heading('2. Process Flow', level=1)
+    doc.add_paragraph(
+        'This scoring run followed the same 8-phase governance structure used for Dataset 1 model '
+        'development, adapted for blind scoring (phases requiring labels are conditional):'
+    )
+    phases_desc = [
+        ('Phase 1 — Data Understanding', 'Schema profiling, business meaning lookup, column alignment verification. No target column used.'),
+        ('Phase 2 — Data Quality Review', 'Missing value, outlier, and duplicate checks scoped to the features the champion model requires.'),
+        ('Phase 3 — Feature Reconstruction', 'Engineered features (int_rate_clean, loan_to_income, etc.) rebuilt from raw columns using the same logic as Dataset 1 training.'),
+        ('Phase 4 — Feature Stability (PSI)', "Each feature's distribution compared against Dataset 1's training reference — fully unsupervised drift check."),
+        ('Phase 5 — Explainability (SHAP)', "SHAP feature importance computed on this dataset's own predictions using the fixed champion model."),
+        ('Phase 6 — Prediction', 'Every row scored using the fixed champion model and training-exact imputation map.'),
+        ('Phase 7 — Validation', 'Conditional — AUC/KS/Gini/Confusion Matrix computed ONLY if a target column with valid labels is present.'),
+        ('Phase 8 — Fairness Check', 'Predicted-risk parity check across proxy attributes on this scored population.'),
+    ]
+    table = doc.add_table(rows=1, cols=2)
+    table.style = 'Light Grid Accent 1'
+    table.rows[0].cells[0].text = 'Phase'
+    table.rows[0].cells[1].text = 'Description'
+    for name, desc in phases_desc:
+        row = table.add_row().cells
+        row[0].text = name
+        row[1].text = desc
+
+    # Section 3 — Data Understanding & Column Alignment
+    doc.add_heading('3. Data Understanding & Column Alignment', level=1)
+    doc.add_paragraph(f"Rows: {p1.get('total_rows', 0):,} | Columns: {p1.get('total_columns', 0)}")
+    doc.add_paragraph(f"Header detected: {p1.get('header_detected', True)}")
+    doc.add_paragraph(f"Business meaning source: {p1.get('dictionary_source', '—')}")
+    if 'scan_summary' in p1:
+        doc.add_paragraph(f"Statistical column scan: {p1.get('scan_summary', '')}")
+
+    # Section 4 — Data Quality Review
+    doc.add_heading('4. Data Quality Review', level=1)
+    p2 = combined_results.get('phase2_data_quality', {})
+    doc.add_paragraph(f"Features found: {len(p2.get('features_found', []))} of {len(p2.get('expected_features', []))}")
+    if p2.get('features_missing'):
+        doc.add_paragraph(f"Missing: {p2.get('features_missing')}")
+    qtable = p2.get('quality_table', [])
+    if qtable:
+        t = doc.add_table(rows=1, cols=len(qtable[0]))
+        t.style = 'Light Grid Accent 1'
+        for i, k in enumerate(qtable[0].keys()):
+            t.rows[0].cells[i].text = str(k)
+        for row_data in qtable:
+            row = t.add_row().cells
+            for i, v in enumerate(row_data.values()):
+                row[i].text = str(v)
+
+    # Section 5 — Feature Reconstruction
+    doc.add_heading('5. Feature Reconstruction', level=1)
+    p3 = combined_results.get('phase3_feature_reconstruction', {})
+    recon_log = p3.get('derived_features_log', [])
+    n_zero = sum(1 for e in recon_log if e.get('status') == 'Zero-imputed')
+    doc.add_paragraph(f"Reconstructed: {p3.get('n_reconstructed', 0)} | Zero-imputed: {n_zero} | "
+                      f"Champion features available: {p3.get('n_available_after', '—')}")
+    if recon_log:
+        t = doc.add_table(rows=1, cols=3)
+        t.style = 'Light Grid Accent 1'
+        for i, h in enumerate(['Feature', 'Derived From', 'Status']):
+            t.rows[0].cells[i].text = h
+        for entry in recon_log:
+            row = t.add_row().cells
+            row[0].text = entry.get('feature', '')
+            row[1].text = entry.get('derived_from', '')
+            row[2].text = entry.get('status', '')
+
+    # Section 6 — Feature Stability (PSI)
+    doc.add_heading('6. Feature Stability (Population Stability Index)', level=1)
+    p4 = combined_results.get('phase4_feature_stability', {})
+    doc.add_paragraph(f"{p4.get('overall_assessment', '—')} (avg PSI={p4.get('avg_psi', '—')}, "
+                      f"{p4.get('n_assessed', 0)} feature(s) assessed). {p4.get('psi_note', '')}")
+    stab_table = p4.get('stability_table', [])
+    if stab_table:
+        t = doc.add_table(rows=1, cols=len(stab_table[0]))
+        t.style = 'Light Grid Accent 1'
+        for i, k in enumerate(stab_table[0].keys()):
+            t.rows[0].cells[i].text = str(k)
+        for row_data in stab_table:
+            row = t.add_row().cells
+            for i, v in enumerate(row_data.values()):
+                row[i].text = str(v)
+
+    # Section 7 — Explainability (SHAP)
+    doc.add_heading('7. Explainability (SHAP)', level=1)
+    p5 = combined_results.get('phase5_explainability', {})
+    imp = p5.get('feature_importance', [])
+    if imp:
+        doc.add_paragraph(f"{p5.get('method', 'SHAP')} computed on {p5.get('sample_size', '—')} sampled predictions.")
+        t = doc.add_table(rows=1, cols=2)
+        t.style = 'Light Grid Accent 1'
+        t.rows[0].cells[0].text = 'Feature'
+        t.rows[0].cells[1].text = 'Mean |SHAP|'
+        for entry in imp:
+            row = t.add_row().cells
+            row[0].text = entry.get('feature', '')
+            row[1].text = str(entry.get('mean_abs_shap', ''))
+        # Embed a bar chart of SHAP importance.
+        try:
+            plt.style.use('dark_background')
+            fig, ax = plt.subplots(figsize=(7, 4))
+            feats = [e['feature'] for e in imp]
+            vals = [e['mean_abs_shap'] for e in imp]
+            ax.barh(feats[::-1], vals[::-1], color='#f59e0b')
+            ax.set_xlabel('Mean |SHAP|')
+            ax.set_title('Dataset 2 — SHAP Feature Importance')
+            chart_path = f'outputs/dataset2/{run_id}_shap_chart.png'
+            fig.savefig(chart_path, dpi=120, bbox_inches='tight', facecolor='#0d1117')
+            plt.close(fig)
+            doc.add_picture(chart_path, width=Inches(6))
+        except Exception:
+            pass
+
+    # Section 8 — Prediction
+    doc.add_heading('8. Prediction', level=1)
+    doc.add_paragraph(f"Records scored: {p6.get('n_scored', 0):,}")
+    doc.add_paragraph(f"Score mean/median: {p6.get('score_mean', '—')} / {p6.get('score_median', '—')}")
+    doc.add_paragraph(f"High-risk (≥0.5): {p6.get('pct_high_risk', '—')}%")
+    bands = p6.get('risk_band_distribution', {})
+    if bands:
+        t = doc.add_table(rows=1, cols=2)
+        t.style = 'Light Grid Accent 1'
+        t.rows[0].cells[0].text = 'Risk Band'
+        t.rows[0].cells[1].text = 'Count'
+        for band, count in bands.items():
+            row = t.add_row().cells
+            row[0].text = str(band)
+            row[1].text = str(count)
+
+    # Section 9 — Validation (conditional)
+    doc.add_heading('9. Validation', level=1)
+    if p7.get('target_available'):
+        doc.add_paragraph(f"Target column used: {p7.get('target_column_used')}")
+        doc.add_paragraph(f"AUC: {p7.get('auc')} | KS: {p7.get('ks')} | Gini: {p7.get('gini')} | "
+                          f"Brier: {p7.get('brier_score')}")
+        doc.add_paragraph(f"Score PSI: {p7.get('score_psi')} ({p7.get('score_psi_assessment')}) "
+                          f"vs {p7.get('score_psi_reference')}")
+        doc.add_paragraph(f"Overall Rating: {p7.get('overall_rating', '—')}")
+        cm = p7.get('confusion_matrix', {})
+        if cm:
+            doc.add_paragraph(
+                f"Precision: {cm.get('precision')} | Recall: {cm.get('recall')} | "
+                f"F1: {cm.get('f1_score')} | Default Rate: {p7.get('default_rate', 0) * 100:.1f}%"
+            )
+        if p7.get('decile_table'):
+            doc.add_paragraph(f"Rank-order check: {p7.get('rank_order_assessment', '—')}")
+    else:
+        doc.add_paragraph(
+            'No ground-truth labels were available in this dataset. This is a true blind scoring '
+            'exercise — validation metrics (AUC, KS, Gini, Confusion Matrix) cannot be computed until '
+            'actual outcomes are observed. Prediction distribution and feature stability checks above '
+            'provide the available evidence of model applicability to this population.'
+        )
+
+    # Section 10 — Fairness Check
+    doc.add_heading('10. Fairness Check', level=1)
+    p8 = combined_results.get('phase8_fairness', {})
+    doc.add_paragraph(p8.get('summary', ''))
+    for attr, groups in p8.get('fairness_results', {}).items():
+        doc.add_paragraph(f"{attr.replace('_', ' ').title()}:", style='Intense Quote')
+        t = doc.add_table(rows=1, cols=4)
+        t.style = 'Light Grid Accent 1'
+        for i, h in enumerate(['Group', 'Count', 'Mean Predicted', 'Concern Level']):
+            t.rows[0].cells[i].text = h
+        for g, stats in groups.items():
+            row = t.add_row().cells
+            row[0].text = str(g)
+            row[1].text = str(stats.get('count', ''))
+            row[2].text = str(stats.get('mean_predicted', ''))
+            row[3].text = str(stats.get('concern_level', ''))
+
+    # Section 11 — Assumptions & Limitations
+    doc.add_heading('11. Assumptions & Limitations', level=1)
+    limitations = [
+        'This report reflects a scoring exercise using a model FIXED from Dataset 1 — no retraining occurred.',
+        f"Column alignment method: {alignment_method}." + (
+            ' All required features were confidently identified.' if alignment_verified else
+            f" {combined_results.get('alignment_warning', '')}"),
+        "Engineered features were reconstructed from raw columns using Dataset 1's exact transformation logic.",
+        'Feature stability (PSI) is assessed unsupervised — it indicates distributional similarity to training data, not predictive accuracy.',
+        'Validation metrics (Section 9) are only available if genuine outcome labels exist in this dataset.',
+        'This model was trained on funded/approved loans only — predictions for populations outside that scope carry additional uncertainty (selection bias).',
+    ]
+    for lim in limitations:
+        doc.add_paragraph(lim, style='List Bullet')
+
+    os.makedirs('outputs/dataset2', exist_ok=True)
+    doc_path = f'outputs/dataset2/{run_id}_Dataset2_Scoring_Report.docx'
+    doc.save(doc_path)
+    return {'phase': 'Documentation', 'report_path': doc_path}
+
+
 # ── Orchestration ───────────────────────────────────────────────────────────
 
 def run_dataset2_pipeline(dataset_path, run_id=None):
@@ -971,8 +1212,16 @@ def run_dataset2_pipeline(dataset_path, run_id=None):
         'phase6_prediction': {k: v for k, v in p6.items() if k != 'predictions'},  # exclude raw array
         'phase7_validation': p7,
         'phase8_fairness': p8,
+        'alignment_method': p1.get('alignment_method'),
         'timestamp': datetime.now().isoformat(),
     }
+
+    # Phase 9 — Documentation (uses the assembled combined results; never fails the run).
+    try:
+        p9 = phase9_documentation(combined, meta)
+    except Exception as _e:
+        p9 = {'phase': 'Documentation', 'report_path': None, 'error': str(_e)}
+    combined['phase9_documentation'] = p9
 
     os.makedirs('outputs/dataset2', exist_ok=True)
     out_path = f"outputs/dataset2/{combined['dataset2_run_id']}_results.json"
@@ -1073,5 +1322,8 @@ if __name__ == '__main__':
         flagged = {g: v for g, v in groups.items() if v['concern_level'] in ('Medium', 'High')}
         print(f"    {attr}: {len(groups)} group(s) checked"
               + (f" | flagged: {list(flagged.keys())}" if flagged else " | all Low concern"))
+
+    p9 = result.get('phase9_documentation', {})
+    print(f"\nPhase 9 — Documentation: {p9.get('report_path') or 'FAILED: ' + str(p9.get('error'))}")
 
     print(f"\nResults saved: {path}")

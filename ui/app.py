@@ -3959,6 +3959,20 @@ elif page == "✅ D2: Validation":
                 fig.update_layout(height=350)
                 st.plotly_chart(fig, use_container_width=True)
 
+        # Dataset 2 Scoring Report (.docx) — available for both blind and labelled runs.
+        p9 = d2.get("phase9_documentation", {})
+        if p9.get("report_path") and os.path.exists(p9["report_path"]):
+            st.markdown("---")
+            st.subheader("Scoring Report")
+            with open(p9["report_path"], "rb") as _rf:
+                st.download_button(
+                    "⬇ Download Dataset 2 Scoring Report (.docx)",
+                    data=_rf.read(),
+                    file_name=os.path.basename(p9["report_path"]),
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    key="d2_report_dl",
+                )
+
 elif page == "⚖ D2: Fairness Check":
     st.markdown("## Dataset 2 — Fairness Check")
     st.caption("Predicted-risk parity check on the scored population — runs regardless of target availability.")
