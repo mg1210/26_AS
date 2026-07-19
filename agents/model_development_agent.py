@@ -251,6 +251,9 @@ class ModelDevelopmentAgent(BaseAgent):
                             'p25':  float(s.quantile(0.25)),
                             'p50':  float(s.quantile(0.50)),
                             'p75':  float(s.quantile(0.75)),
+                            # Raw missing fraction — plausibility bound for the Dataset 2 statistical
+                            # scan's per-variable sanity check (e.g. revol_util ~0% missing).
+                            'missing_pct': float(state.raw_df[col].isna().mean()),
                         }
             stats_path = f'outputs/models/{state.run_id}_reference_stats.json'
             with open(stats_path, 'w') as _f:
