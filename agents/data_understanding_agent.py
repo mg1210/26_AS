@@ -759,8 +759,8 @@ Respond ONLY with a JSON object:
 """
         try:
             annotations, _usage = ask_json_with_usage(prompt, system=CREDIT_RISK_SYSTEM, max_tokens=2000)
-            state.llm_token_usage[self.name] = _usage
-            for col, info in annotations.items():
+            state.llm_token_usage[self.name] = _usage          # recorded even if JSON parse failed
+            for col, info in (annotations or {}).items():
                 if col in state.schema_profile:
                     state.schema_profile[col]["business_meaning"] = info.get("meaning", "")
                     state.schema_profile[col]["category"]         = info.get("category", "")

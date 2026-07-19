@@ -67,13 +67,20 @@ def ask(prompt: str, system: str = "", max_tokens: int = 1024) -> str:
 
 
 def ask_json_with_usage(prompt: str, system: str = "", max_tokens: int = 1024):
-    """Ask Claude for a JSON response; return (parsed_dict, usage_dict)."""
+    """Ask Claude for a JSON response; return (parsed_dict_or_None, usage_dict).
+
+    Token usage is captured from the API response BEFORE the JSON parse is attempted, so it is
+    never lost even if the response is empty or not valid JSON. On a parse failure this returns
+    (None, usage) instead of raising — callers get the usage regardless and handle None."""
     raw, usage = ask_with_usage(prompt, system=system, max_tokens=max_tokens)
     clean = raw.strip()
     if clean.startswith("```"):
         clean = clean.split("\n", 1)[-1]
         clean = clean.rsplit("```", 1)[0]
-    return json.loads(clean.strip()), usage
+    try:
+        return json.loads(clean.strip()), usage
+    except (json.JSONDecodeError, ValueError):
+        return None, usage
 
 
 def ask_json(prompt: str, system: str = "", max_tokens: int = 1024) -> dict:
