@@ -23,6 +23,9 @@ import sys
 import glob
 import joblib
 import warnings
+import subprocess
+import tempfile
+import shutil
 from datetime import datetime
 
 # Ensure the project root is importable when run directly as `python agents/dataset2_pipeline.py`
@@ -240,18 +243,144 @@ def _alignment_fields(phase1_result):
     }
 
 
+# ── Statistical-scan fallback (headerless Dataset 2 only) ───────────────────
+# The 9 champion raw variables the scanner must find; verification_status is categorical.
+CHAMPION_RAW_VARS = ["int_rate", "loan_amnt", "annual_inc", "dti", "revol_util",
+                     "tot_cur_bal", "open_acc", "total_acc", "verification_status"]
+CATEGORICAL_RAW_VARS = {"verification_status": {"not verified", "source verified", "verified"}}
+CONFIDENCE_THRESHOLD = 0.90
+VALUE_BAND_TOL = 0.50      # median must be within [p25*(1-tol), p75*(1+tol)] and [min, max]
+MISSING_PCT_TOL = 0.15     # |scanned missing% - training missing%| must be <= this
+VOCAB_OVERLAP_MIN = 0.80   # >=80% of categorical rows must fall in the expected vocab
+
+
+def run_column_scanner(headerless_csv, dict_path, out_dir, timeout=420):
+    """Run lc_column_scanner.py as a subprocess on the FULL headerless CSV; parse
+    column_mapping.json. Returns {col_index(int): {'variable': str|None, 'confidence': float}}
+    or None if the scan cannot run (missing scanner/dict, subprocess error/timeout, unparseable
+    output). Scans the full data (not a sample) so identification matches the scanner's true
+    accuracy — this can take several minutes on large files, hence the generous timeout."""
+    scanner = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                           'lc_column_scanner.py')
+    if not os.path.exists(scanner):
+        return None
+    cmd = [sys.executable, scanner, '--csv', headerless_csv, '--out', out_dir]
+    if dict_path and os.path.exists(dict_path):
+        cmd += ['--dict', dict_path]
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout,
+                           env=dict(os.environ, PYTHONUTF8='1', PYTHONIOENCODING='utf-8'))
+        if r.returncode != 0:
+            return None
+        with open(os.path.join(out_dir, 'column_mapping.json'), encoding='utf-8') as f:
+            cm = json.load(f).get('column_mapping', {})
+        return {int(k): {'variable': v.get('variable'),
+                         'confidence': float(v.get('confidence') or 0.0)}
+                for k, v in cm.items()}
+    except Exception:
+        return None
+
+
+def _sanity_numeric(series, ref):
+    """Value-band plausibility (from training percentiles) AND missingness plausibility.
+    Missingness is what catches a wrong pick like revol_util (train ~0% vs scanned 79.6%)."""
+    if not ref or 'missing_pct' not in ref:
+        return False, 'no training missing_pct in reference_stats'
+    s = pd.to_numeric(series, errors='coerce')
+    if s.notna().sum() < 10:
+        return False, 'too few numeric values'
+    med = float(s.median())
+    val_ok = (ref['min'] <= med <= ref['max']) and \
+             (ref['p25'] * (1 - VALUE_BAND_TOL) <= med <= ref['p75'] * (1 + VALUE_BAND_TOL))
+    if not val_ok:
+        return False, (f"value out of band (median {med:.2f} vs train p25-p75 "
+                       f"{ref['p25']}-{ref['p75']})")
+    miss = float(series.isna().mean())
+    if abs(miss - ref['missing_pct']) > MISSING_PCT_TOL:
+        return False, f"missingness mismatch (scanned {miss:.1%} vs train {ref['missing_pct']:.1%})"
+    return True, f"ok (median {med:.2f}, missing {miss:.1%})"
+
+
+def _sanity_categorical(series, expected_vocab):
+    """Passes if a high fraction of rows fall in the expected category vocabulary."""
+    vals = series.astype(str).str.lower().str.strip()
+    overlap = float(vals.isin(expected_vocab).mean())
+    ok = overlap >= VOCAB_OVERLAP_MIN
+    return ok, f"vocab overlap {overlap:.1%}" + ("" if ok else " (below threshold)")
+
+
+def _sanity_check(var, series, reference_stats):
+    """Dispatch to the numeric or categorical sanity check for a champion raw variable."""
+    if var in CATEGORICAL_RAW_VARS:
+        return _sanity_categorical(series, CATEGORICAL_RAW_VARS[var])
+    ref = (reference_stats or {}).get(var)
+    if not ref:
+        return False, 'no reference stats'
+    return _sanity_numeric(series, ref)
+
+
+def gate_scanner_assignments(df_raw, scanner_map, reference_stats):
+    """Per-variable confidence + sanity gating. A variable is RESOLVED only if the scanner's
+    confidence >= CONFIDENCE_THRESHOLD AND the sanity check passes; otherwise UNRESOLVED (never
+    guessed). Returns (resolved{var:col_index}, unresolved[list], detail[list-of-dicts])."""
+    # Invert the scanner map: champion raw var -> best (col_index, confidence).
+    var_to_col = {}
+    for col, info in scanner_map.items():
+        v = info.get('variable')
+        if v in CHAMPION_RAW_VARS and (v not in var_to_col or info['confidence'] > var_to_col[v][1]):
+            var_to_col[v] = (col, info['confidence'])
+
+    resolved, unresolved, detail = {}, [], []
+    for var in CHAMPION_RAW_VARS:
+        entry = {'variable': var, 'scanner_col': None, 'confidence': None,
+                 'sanity_ok': None, 'reason': None, 'status': 'UNRESOLVED'}
+        if var not in var_to_col:
+            entry['reason'] = 'scanner did not assign this variable'
+            unresolved.append(var); detail.append(entry); continue
+        col, conf = var_to_col[var]
+        entry['scanner_col'] = col
+        entry['confidence'] = round(conf, 3)
+        conf_ok = conf >= CONFIDENCE_THRESHOLD
+        sane, reason = _sanity_check(var, df_raw.iloc[:, col], reference_stats)
+        entry['sanity_ok'] = sane
+        entry['reason'] = reason
+        if conf_ok and sane:
+            resolved[var] = col
+            entry['status'] = 'RESOLVED'
+        else:
+            unresolved.append(var)
+            if not conf_ok:
+                entry['reason'] = f"confidence {conf:.2f} < {CONFIDENCE_THRESHOLD} | {reason}"
+        detail.append(entry)
+    return resolved, unresolved, detail
+
+
 # ── Phase 1 — Data Understanding ────────────────────────────────────────────
 
 def phase1_data_understanding(dataset_path, meta):
     """Profile Dataset 2 — schema, semantic types, business meanings. No target handling."""
     result = {'phase': 'Data Understanding', 'dataset': os.path.basename(dataset_path)}
 
-    # Header detection — same logic as the main pipeline.
+    # Header detection — compare the numeric fraction of the first two rows. A header row is
+    # markedly LESS numeric than the first data row beneath it; a headerless file has two
+    # consecutive DATA rows with similar numeric fractions. This is robust to categorical/empty-
+    # heavy data where a single-row "is it mostly numeric?" test misfires (a data row full of
+    # categoricals/blanks looks header-like on its own).
+    def _numeric_fraction(line):
+        fields = line.strip().split(',')
+        if not fields:
+            return 0.0
+        n = sum(1 for fld in fields
+                if fld.strip().replace('.', '').replace('-', '').lstrip('-').isdigit())
+        return n / len(fields)
     with open(dataset_path, 'r', encoding='utf-8', errors='replace') as f:
-        first_line = f.readline()
-    fields = first_line.strip().split(',')
-    numeric_count = sum(1 for fld in fields if fld.strip().replace('.', '').replace('-', '').lstrip('-').isdigit())
-    has_header = numeric_count < len(fields) * 0.5
+        _line0 = f.readline()
+        _line1 = f.readline()
+    _f0 = _numeric_fraction(_line0)
+    if _line1.strip():
+        has_header = (_numeric_fraction(_line1) - _f0) > 0.20
+    else:
+        has_header = _f0 < 0.5   # single-row fallback
 
     # alignment_verified=True only when columns are matched by real names (headered file).
     # Headerless files fall back to positional assignment, which can silently produce
@@ -267,26 +396,69 @@ def phase1_data_understanding(dataset_path, meta):
         result['alignment_verified'] = True
         result['alignment_warning'] = ''
     else:
-        # Headerless: best-effort positional assignment, but flagged UNVERIFIED throughout.
+        # ── Headerless: statistical-scan fallback (confidence + sanity gated) ──
         result['header_detected'] = False
-        result['alignment_verified'] = False
-        result['alignment_warning'] = HEADERLESS_WARNING
-        col_order_path = 'outputs/models/dataset1_column_order.json'
-        if not os.path.exists(col_order_path):
-            col_order_path = 'sample_results/dataset1_column_order.json'
-        df = pd.read_csv(dataset_path, header=None, low_memory=False)
-        if os.path.exists(col_order_path):
-            with open(col_order_path) as f:
-                dataset1_cols = json.load(f)
-            if len(dataset1_cols) == len(df.columns):
-                df.columns = dataset1_cols
-                result['columns_assigned_from'] = 'Dataset 1 reference order (UNVERIFIED — positional best-effort)'
+        df_raw = pd.read_csv(dataset_path, header=None, low_memory=False)
+
+        dict_path = None
+        for _dp in glob.glob('data/*ictionary*.xlsx'):
+            dict_path = _dp
+            break
+        _tmp_out = tempfile.mkdtemp(prefix='d2scan_')
+        try:
+            scanner_map = run_column_scanner(dataset_path, dict_path, _tmp_out)
+        finally:
+            shutil.rmtree(_tmp_out, ignore_errors=True)
+
+        if scanner_map is not None:
+            reference_stats = load_reference_stats(meta)
+            resolved, unresolved, detail = gate_scanner_assignments(df_raw, scanner_map, reference_stats)
+            # Name ONLY resolved columns with their true champion-raw names. Every other column
+            # keeps a neutral col_i name, so an unresolved/failed pick can never masquerade as a
+            # champion feature — it is simply absent and gets training-median imputation downstream.
+            new_cols = [f'col_{i}' for i in range(df_raw.shape[1])]
+            for var, col in resolved.items():
+                new_cols[col] = var
+            df = df_raw.copy()
+            df.columns = new_cols
+
+            n_ok, m_bad = len(resolved), len(unresolved)
+            result['scan_summary'] = (f"{n_ok} of {len(CHAMPION_RAW_VARS)} raw variables identified "
+                                      f"with high confidence via statistical scan, {m_bad} unresolved")
+            result['scan_detail'] = detail
+            result['columns_assigned_from'] = 'statistical scan (confidence + sanity gated)'
+            if m_bad == 0:
+                result['alignment_verified'] = True
+                result['alignment_method'] = 'statistical scan (all variables verified)'
+                result['alignment_warning'] = ''
+            else:
+                result['alignment_verified'] = False
+                result['alignment_method'] = 'statistical scan (partial)'
+                result['alignment_warning'] = (
+                    f"UNVERIFIED — {m_bad} champion feature input(s) could not be confidently "
+                    f"identified via statistical scan: {unresolved}. These are imputed with training "
+                    "medians; predictions for them are approximate.")
+        else:
+            # Scanner unavailable/failed → existing positional best-effort, UNVERIFIED.
+            result['alignment_verified'] = False
+            result['alignment_method'] = 'positional (scanner unavailable)'
+            result['alignment_warning'] = HEADERLESS_WARNING
+            col_order_path = 'outputs/models/dataset1_column_order.json'
+            if not os.path.exists(col_order_path):
+                col_order_path = 'sample_results/models/dataset1_column_order.json'
+            df = df_raw
+            if os.path.exists(col_order_path):
+                with open(col_order_path) as f:
+                    dataset1_cols = json.load(f)
+                if len(dataset1_cols) == len(df.columns):
+                    df.columns = dataset1_cols
+                    result['columns_assigned_from'] = 'Dataset 1 reference order (UNVERIFIED — positional best-effort)'
+                else:
+                    df.columns = [f'col_{i}' for i in range(len(df.columns))]
+                    result['columns_assigned_from'] = 'auto-generated (count mismatch with Dataset 1)'
             else:
                 df.columns = [f'col_{i}' for i in range(len(df.columns))]
-                result['columns_assigned_from'] = 'auto-generated (count mismatch with Dataset 1)'
-        else:
-            df.columns = [f'col_{i}' for i in range(len(df.columns))]
-            result['columns_assigned_from'] = 'auto-generated (no reference found)'
+                result['columns_assigned_from'] = 'auto-generated (no reference found)'
 
     result['total_rows'] = len(df)
     result['total_columns'] = df.shape[1]
