@@ -28,13 +28,26 @@ def _get_client():
     return _client
 
 
-def ask(prompt: str, system: str = "", max_tokens: int = 1024) -> str:
-    """Send a prompt to Claude and return the text response. Returns '' if no API key."""
+def _empty_usage() -> dict:
+    return {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
+
+
+def _usage_from(response) -> dict:
+    """Extract token usage from an Anthropic response (tokens only, no cost)."""
+    u = getattr(response, "usage", None)
+    it = int(getattr(u, "input_tokens", 0) or 0)
+    ot = int(getattr(u, "output_tokens", 0) or 0)
+    return {"input_tokens": it, "output_tokens": ot, "total_tokens": it + ot}
+
+
+def ask_with_usage(prompt: str, system: str = "", max_tokens: int = 1024):
+    """Send a prompt to Claude; return (text, usage_dict). usage_dict carries
+    input_tokens/output_tokens/total_tokens. Returns ('', zero-usage) if no API key."""
     try:
         client = _get_client()
     except RuntimeError as e:
         print(f"  LLM skipped — {e.args[0].splitlines()[0]}")
-        return ""
+        return "", _empty_usage()
     messages = [{"role": "user", "content": prompt}]
     kwargs = dict(
         model="claude-sonnet-4-6",
@@ -44,17 +57,29 @@ def ask(prompt: str, system: str = "", max_tokens: int = 1024) -> str:
     if system:
         kwargs["system"] = system
     response = client.messages.create(**kwargs)
-    return response.content[0].text
+    return response.content[0].text, _usage_from(response)
 
 
-def ask_json(prompt: str, system: str = "", max_tokens: int = 1024) -> dict:
-    """Ask Claude for a JSON response. Strips markdown fences before parsing."""
-    raw = ask(prompt, system=system, max_tokens=max_tokens)
+def ask(prompt: str, system: str = "", max_tokens: int = 1024) -> str:
+    """Send a prompt to Claude and return the text response. Returns '' if no API key."""
+    text, _ = ask_with_usage(prompt, system=system, max_tokens=max_tokens)
+    return text
+
+
+def ask_json_with_usage(prompt: str, system: str = "", max_tokens: int = 1024):
+    """Ask Claude for a JSON response; return (parsed_dict, usage_dict)."""
+    raw, usage = ask_with_usage(prompt, system=system, max_tokens=max_tokens)
     clean = raw.strip()
     if clean.startswith("```"):
         clean = clean.split("\n", 1)[-1]
         clean = clean.rsplit("```", 1)[0]
-    return json.loads(clean.strip())
+    return json.loads(clean.strip()), usage
+
+
+def ask_json(prompt: str, system: str = "", max_tokens: int = 1024) -> dict:
+    """Ask Claude for a JSON response. Strips markdown fences before parsing."""
+    data, _ = ask_json_with_usage(prompt, system=system, max_tokens=max_tokens)
+    return data
 
 
 CREDIT_RISK_SYSTEM = """

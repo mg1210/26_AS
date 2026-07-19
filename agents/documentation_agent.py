@@ -24,9 +24,9 @@ from core.base_agent import BaseAgent
 from core.state import PipelineState
 
 try:
-    from core.llm import ask, CREDIT_RISK_SYSTEM
+    from core.llm import ask, ask_with_usage, CREDIT_RISK_SYSTEM
 except Exception:  # pragma: no cover
-    ask, CREDIT_RISK_SYSTEM = None, ""
+    ask, ask_with_usage, CREDIT_RISK_SYSTEM = None, None, ""
 
 try:
     from agents.validation_agent import get_rag, KPI_THRESHOLDS
@@ -54,6 +54,7 @@ class DocumentationAgent(BaseAgent):
 
     # ═══════════════════════════════════════════════════════════════
     def run(self, state: PipelineState) -> PipelineState:
+        self._token_usage = {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
         self._log("Rendering SHAP beeswarm image …")
         self._shap_png = self._make_shap_png(state)
 
@@ -68,6 +69,9 @@ class DocumentationAgent(BaseAgent):
 
         self._log("Writing plain-text report …")
         state = self._generate_txt(state)
+
+        # Record accumulated LLM token usage before the audit trail is serialised.
+        state.llm_token_usage[self.name] = self._token_usage
 
         self._log("Saving audit trail JSON …")
         state = self._save_audit(state)
@@ -95,10 +99,17 @@ class DocumentationAgent(BaseAgent):
 
     # ───────────────────────── helpers ─────────────────────────────
     def _llm(self, prompt: str, max_tokens: int = 350) -> str:
-        if ask is None:
+        if ask_with_usage is None:
             return ""
         try:
-            return ask(prompt, system=CREDIT_RISK_SYSTEM, max_tokens=max_tokens)
+            text, usage = ask_with_usage(prompt, system=CREDIT_RISK_SYSTEM, max_tokens=max_tokens)
+            # Accumulate across the (multiple) narrative calls this agent makes.
+            acc = getattr(self, "_token_usage", None)
+            if acc is not None:
+                acc["input_tokens"] += usage["input_tokens"]
+                acc["output_tokens"] += usage["output_tokens"]
+                acc["total_tokens"] += usage["total_tokens"]
+            return text
         except Exception:
             return ""
 

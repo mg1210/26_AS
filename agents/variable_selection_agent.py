@@ -19,7 +19,7 @@ from sklearn.inspection import permutation_importance
 from sklearn.model_selection import cross_val_score
 from core.base_agent import BaseAgent
 from core.state import PipelineState
-from core.llm import ask, CREDIT_RISK_SYSTEM
+from core.llm import ask, ask_with_usage, CREDIT_RISK_SYSTEM
 from core.recommendation import Recommendation
 
 
@@ -301,7 +301,8 @@ Explain:
 Be specific — reference actual feature names and IV values.
 """
         try:
-            rationale = ask(prompt, system=CREDIT_RISK_SYSTEM, max_tokens=500)
+            rationale, _usage = ask_with_usage(prompt, system=CREDIT_RISK_SYSTEM, max_tokens=500)
+            state.llm_token_usage[self.name] = _usage
             state.dqr_report["variable_selection_rationale"] = rationale
             self._info("LLM variable selection rationale generated")
         except Exception as e:

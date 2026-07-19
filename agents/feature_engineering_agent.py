@@ -20,7 +20,7 @@ import pandas as pd
 import numpy as np
 from core.base_agent import BaseAgent
 from core.state import PipelineState
-from core.llm import ask, CREDIT_RISK_SYSTEM
+from core.llm import ask, ask_with_usage, CREDIT_RISK_SYSTEM
 
 
 class FeatureEngineeringAgent(BaseAgent):
@@ -397,7 +397,8 @@ Write a brief Feature Engineering Summary (max 200 words) for the model developm
 Note any potential multicollinearity concerns, key domain-driven features, and imputation choices.
 """
         try:
-            summary = ask(prompt, system=CREDIT_RISK_SYSTEM, max_tokens=500)
+            summary, _usage = ask_with_usage(prompt, system=CREDIT_RISK_SYSTEM, max_tokens=500)
+            state.llm_token_usage[self.name] = _usage
             state.dqr_report["feature_engineering_summary"] = summary
             self._info("LLM feature summary generated")
         except Exception as e:

@@ -25,7 +25,7 @@ except Exception:  # pragma: no cover — older sklearn
     FrozenEstimator = None
 from core.base_agent import BaseAgent
 from core.state import PipelineState
-from core.llm import ask, CREDIT_RISK_SYSTEM
+from core.llm import ask, ask_with_usage, CREDIT_RISK_SYSTEM
 from core.recommendation import Recommendation
 import json
 import os
@@ -719,7 +719,8 @@ Cover:
 Be direct and specific — this is for model governance sign-off.
 """
         try:
-            summary = ask(prompt, system=CREDIT_RISK_SYSTEM, max_tokens=700)
+            summary, _usage = ask_with_usage(prompt, system=CREDIT_RISK_SYSTEM, max_tokens=700)
+            state.llm_token_usage[self.name] = _usage
             state.validation_summary = summary
             self._info("LLM validation summary generated")
         except Exception as e:

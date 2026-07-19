@@ -33,7 +33,7 @@ optuna.logging.set_verbosity(optuna.logging.WARNING)
 
 from core.base_agent import BaseAgent
 from core.state import PipelineState
-from core.llm import ask, CREDIT_RISK_SYSTEM
+from core.llm import ask, ask_with_usage, CREDIT_RISK_SYSTEM
 from core.recommendation import Recommendation
 
 
@@ -626,7 +626,8 @@ Address:
 4. Recommended next steps for validation
 """
         try:
-            rationale = ask(prompt, system=CREDIT_RISK_SYSTEM, max_tokens=500)
+            rationale, _usage = ask_with_usage(prompt, system=CREDIT_RISK_SYSTEM, max_tokens=500)
+            state.llm_token_usage[self.name] = _usage
             state.model_selection_rationale = rationale
             self._info("LLM model selection rationale generated")
         except Exception as e:

@@ -18,7 +18,7 @@ import numpy as np
 from scipy import stats as scipy_stats
 from core.base_agent import BaseAgent
 from core.state import PipelineState
-from core.llm import ask, CREDIT_RISK_SYSTEM
+from core.llm import ask, ask_with_usage, CREDIT_RISK_SYSTEM
 
 
 class DQRAgent(BaseAgent):
@@ -461,7 +461,8 @@ Cover:
 Be specific — reference actual column names and percentages from the facts above.
 """
         try:
-            narrative = ask(prompt, system=CREDIT_RISK_SYSTEM, max_tokens=600)
+            narrative, _usage = ask_with_usage(prompt, system=CREDIT_RISK_SYSTEM, max_tokens=600)
+            state.llm_token_usage[self.name] = _usage
             state.dqr_report["llm_narrative"] = narrative
             self._info("LLM DQR narrative generated")
         except Exception as e:

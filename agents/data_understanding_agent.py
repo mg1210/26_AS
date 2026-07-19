@@ -24,7 +24,7 @@ from sklearn.metrics import roc_auc_score
 
 from core.base_agent import BaseAgent
 from core.state import PipelineState
-from core.llm import ask_json, ask, CREDIT_RISK_SYSTEM
+from core.llm import ask_json, ask, ask_json_with_usage, CREDIT_RISK_SYSTEM
 from core.recommendation import Recommendation
 from core.data_loader import smart_read_csv
 
@@ -758,7 +758,8 @@ Respond ONLY with a JSON object:
 {{"column_name": {{"meaning": "...", "category": "..."}} }}
 """
         try:
-            annotations = ask_json(prompt, system=CREDIT_RISK_SYSTEM, max_tokens=2000)
+            annotations, _usage = ask_json_with_usage(prompt, system=CREDIT_RISK_SYSTEM, max_tokens=2000)
+            state.llm_token_usage[self.name] = _usage
             for col, info in annotations.items():
                 if col in state.schema_profile:
                     state.schema_profile[col]["business_meaning"] = info.get("meaning", "")

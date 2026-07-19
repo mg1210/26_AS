@@ -455,6 +455,25 @@ NEXT_PHASE_MAP = {
 }
 
 
+def format_tokens(n):
+    """Compact token notation: 1234 -> '1.2K'."""
+    n = n or 0
+    if n >= 1000:
+        return f"{n/1000:.1f}K"
+    return str(n)
+
+
+def show_llm_token_caption(data: dict, agent_name: str):
+    """Small, low-key per-phase LLM token caption (tokens only, no cost)."""
+    tokens = data.get("llm_token_usage", {}).get(agent_name, {})
+    if tokens:
+        st.caption(f"🔤 {format_tokens(tokens.get('total_tokens', 0))} tokens "
+                   f"({format_tokens(tokens.get('input_tokens', 0))} in / "
+                   f"{format_tokens(tokens.get('output_tokens', 0))} out)")
+    else:
+        st.caption("LLM not used for this phase")
+
+
 def show_ai_findings(data: dict, agent_name: str):
     """## AI Findings — summary + observations from the agent response."""
     resp = data.get("agent_responses", {}).get(agent_name, {})
@@ -470,6 +489,7 @@ def show_ai_findings(data: dict, agent_name: str):
             pd.DataFrame({"#": range(1, len(obs) + 1), "Observation": obs}),
             use_container_width=True, hide_index=True,
         )
+    show_llm_token_caption(data, agent_name)
 
 
 def show_ai_recommendation(data: dict, agent_name: str, page_recs: list = None):
@@ -880,10 +900,16 @@ if page == "Home":
             if agent_times:
                 total_s = sum(agent_times.values())
                 wall = st.session_state.get("last_run_seconds")
-                t1, t2 = st.columns(2)
+                _tok = data.get("llm_token_usage", {})
+                _total_tok = sum(v.get("total_tokens", 0) for v in _tok.values()) if _tok else 0
+                t1, t2, t3 = st.columns(3)
                 t1.metric("Total pipeline time", f"{total_s:.1f}s")
                 t2.metric("Wall-clock (last run)",
                           f"{wall:.1f}s" if isinstance(wall, (int, float)) else "—")
+                if _tok:
+                    with t3:
+                        st.metric("Total LLM Usage", f"{format_tokens(_total_tok)} tokens")
+                        st.caption(f"across {len(_tok)} phase(s)")
                 with st.expander("⏱ Time by phase (slowest first)"):
                     tdf = pd.DataFrame(
                         [{"Phase": k.replace("Agent", ""), "Seconds": round(v, 1),
@@ -1004,6 +1030,7 @@ elif page == "📊 Data Understanding":
                 pd.DataFrame({"#": range(1, len(_du_obs) + 1), "Observation": _du_obs}),
                 use_container_width=True, hide_index=True, height=220,
             )
+        show_llm_token_caption(data, "DataUnderstandingAgent")
 
         # ── 2. Dataset Overview ───────────────────────────────────
         st.subheader("Dataset Overview")

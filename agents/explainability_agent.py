@@ -16,7 +16,7 @@ import numpy as np
 import shap
 from core.base_agent import BaseAgent
 from core.state import PipelineState
-from core.llm import ask, CREDIT_RISK_SYSTEM
+from core.llm import ask, ask_with_usage, CREDIT_RISK_SYSTEM
 
 
 class ExplainabilityAgent(BaseAgent):
@@ -308,7 +308,8 @@ Cover:
 Write in plain English suitable for a credit committee or model governance audience.
 """
         try:
-            narrative = ask(prompt, system=CREDIT_RISK_SYSTEM, max_tokens=700)
+            narrative, _usage = ask_with_usage(prompt, system=CREDIT_RISK_SYSTEM, max_tokens=700)
+            state.llm_token_usage[self.name] = _usage
             state.shap_summary = narrative
             self._info("LLM explanation narrative generated")
         except Exception as e:
