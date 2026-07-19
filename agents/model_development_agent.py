@@ -461,7 +461,7 @@ class ModelDevelopmentAgent(BaseAgent):
         # HITL override → skip Optuna search and fit the supplied params directly.
         _xgb_ov, _overridden = self._override_params("XGBoost", {})
         if _overridden:
-            best = {"scale_pos_weight": scale_pos, "random_state": 42, "eval_metric": "auc"}
+            best = {"scale_pos_weight": scale_pos, "random_state": 42, "eval_metric": "auc", "n_jobs": 1}
             best.update(_xgb_ov)
             xgb_model = xgb.XGBClassifier(**best, verbosity=0)
             xgb_model.fit(X_tr, y_tr, eval_set=[(X_te, y_te)], verbose=False)
@@ -484,17 +484,23 @@ class ModelDevelopmentAgent(BaseAgent):
                 "random_state"     : 42,
                 "eval_metric"      : "auc",
                 "use_label_encoder": False,
+                # Single-threaded so tree-build order (and thus AUC) is byte-identical across
+                # runs — eliminates the XGBoost threading non-determinism that flipped champion
+                # selection. Other models keep their threading settings.
+                "n_jobs"           : 1,
             }
             model = xgb.XGBClassifier(**params, verbosity=0)
             cv_scores = cross_val_score(model, X_tr, y_tr, cv=3,
-                                        scoring="roc_auc", n_jobs=-1)
+                                        scoring="roc_auc", n_jobs=1)
             return cv_scores.mean()
 
         study = optuna.create_study(direction="maximize",
                                     sampler=optuna.samplers.TPESampler(seed=42))
-        # timeout bounds tuning wall-clock (whichever of n_trials / timeout hits first);
-        # returns diminish quickly, so 45s keeps AUC within noise while trimming runtime.
-        study.optimize(objective, n_trials=self.optuna_trials, timeout=45, show_progress_bar=False)
+        # Run EXACTLY n_trials (no wall-clock timeout): a timeout stops the search at a
+        # timing-dependent trial count, which changes best_params run-to-run and flips champion
+        # selection. With n_jobs=1 (deterministic training) + fixed trial count + seeded sampler,
+        # the XGBoost result is byte-identical across runs. Control cost via --trials.
+        study.optimize(objective, n_trials=self.optuna_trials, show_progress_bar=False)
 
         # Capture the search history so the report can explain the tuning process.
         _vals = [t.value for t in study.trials if t.value is not None]
@@ -514,6 +520,7 @@ class ModelDevelopmentAgent(BaseAgent):
         best["scale_pos_weight"] = scale_pos
         best["random_state"]     = 42
         best["eval_metric"]      = "auc"
+        best["n_jobs"]           = 1        # single-threaded final refit (deterministic)
 
         xgb_model = xgb.XGBClassifier(**best, verbosity=0)
         xgb_model.fit(X_tr, y_tr,
