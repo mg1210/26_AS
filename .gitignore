@@ -31,6 +31,11 @@ outputs/
 .streamlit/secrets.toml
 api_key.txt
 
+# Regenerable scanner test output + temp scratch files
+scanner_test_output/
+data/*_temp.csv
+Data_Dictionary_nospace.xlsx
+
 # OS
 .DS_Store
 Thumbs.db
