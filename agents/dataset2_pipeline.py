@@ -283,39 +283,62 @@ def run_column_scanner(headerless_csv, dict_path, out_dir, timeout=420):
 
 def _sanity_numeric(series, ref):
     """Value-band plausibility (from training percentiles) AND missingness plausibility.
-    Missingness is what catches a wrong pick like revol_util (train ~0% vs scanned 79.6%)."""
+    Missingness is what catches a wrong pick like revol_util (train ~0% vs scanned 79.6%).
+    Returns (ok, reason, extra); `extra` breaks out each sub-check verdict and the
+    scanned-vs-training values so the HITL Feature Mapping Review can show why a pick
+    passed or failed (both checks are evaluated even when the first one fails)."""
+    miss = float(series.isna().mean())
+    extra = {'value_check': '—', 'missingness_check': '—',
+             'scanned_value': None, 'training_value': None,
+             'scanned_missing_pct': round(miss * 100, 1), 'training_missing_pct': None}
     if not ref or 'missing_pct' not in ref:
-        return False, 'no training missing_pct in reference_stats'
+        return False, 'no training missing_pct in reference_stats', extra
+    extra['training_missing_pct'] = round(ref['missing_pct'] * 100, 1)
+    extra['training_value'] = f"{ref['p50']:,.0f} median"
     s = pd.to_numeric(series, errors='coerce')
     if s.notna().sum() < 10:
-        return False, 'too few numeric values'
+        return False, 'too few numeric values', extra
     med = float(s.median())
+    extra['scanned_value'] = f"{med:,.0f} median"
     val_ok = (ref['min'] <= med <= ref['max']) and \
              (ref['p25'] * (1 - VALUE_BAND_TOL) <= med <= ref['p75'] * (1 + VALUE_BAND_TOL))
+    miss_ok = abs(miss - ref['missing_pct']) <= MISSING_PCT_TOL
+    extra['value_check'] = 'PASS' if val_ok else 'FAIL'
+    extra['missingness_check'] = 'PASS' if miss_ok else 'FAIL'
     if not val_ok:
         return False, (f"value out of band (median {med:.2f} vs train p25-p75 "
-                       f"{ref['p25']}-{ref['p75']})")
-    miss = float(series.isna().mean())
-    if abs(miss - ref['missing_pct']) > MISSING_PCT_TOL:
-        return False, f"missingness mismatch (scanned {miss:.1%} vs train {ref['missing_pct']:.1%})"
-    return True, f"ok (median {med:.2f}, missing {miss:.1%})"
+                       f"{ref['p25']}-{ref['p75']})"), extra
+    if not miss_ok:
+        return False, f"missingness mismatch (scanned {miss:.1%} vs train {ref['missing_pct']:.1%})", extra
+    return True, f"ok (median {med:.2f}, missing {miss:.1%})", extra
 
 
 def _sanity_categorical(series, expected_vocab):
-    """Passes if a high fraction of rows fall in the expected category vocabulary."""
+    """Passes if a high fraction of rows fall in the expected category vocabulary.
+    Returns (ok, reason, extra) mirroring _sanity_numeric's shape for the review table
+    (categoricals have no missingness gate, so missingness_check is reported as N/A)."""
     vals = series.astype(str).str.lower().str.strip()
     overlap = float(vals.isin(expected_vocab).mean())
+    miss = float(series.isna().mean())
     ok = overlap >= VOCAB_OVERLAP_MIN
-    return ok, f"vocab overlap {overlap:.1%}" + ("" if ok else " (below threshold)")
+    extra = {'value_check': 'PASS' if ok else 'FAIL', 'missingness_check': 'N/A',
+             'scanned_value': f"{overlap:.0%} vocab overlap",
+             'training_value': f"{len(expected_vocab)} expected categories",
+             'scanned_missing_pct': round(miss * 100, 1), 'training_missing_pct': None}
+    return ok, f"vocab overlap {overlap:.1%}" + ("" if ok else " (below threshold)"), extra
 
 
 def _sanity_check(var, series, reference_stats):
-    """Dispatch to the numeric or categorical sanity check for a champion raw variable."""
+    """Dispatch to the numeric or categorical sanity check for a champion raw variable.
+    Returns (ok, reason, extra)."""
     if var in CATEGORICAL_RAW_VARS:
         return _sanity_categorical(series, CATEGORICAL_RAW_VARS[var])
     ref = (reference_stats or {}).get(var)
     if not ref:
-        return False, 'no reference stats'
+        return False, 'no reference stats', {
+            'value_check': '—', 'missingness_check': '—',
+            'scanned_value': None, 'training_value': None,
+            'scanned_missing_pct': None, 'training_missing_pct': None}
     return _sanity_numeric(series, ref)
 
 
@@ -332,16 +355,25 @@ def gate_scanner_assignments(df_raw, scanner_map, reference_stats):
 
     resolved, unresolved, detail = {}, [], []
     for var in CHAMPION_RAW_VARS:
-        entry = {'variable': var, 'scanner_col': None, 'confidence': None,
-                 'sanity_ok': None, 'reason': None, 'status': 'UNRESOLVED'}
+        # Full per-variable record for the HITL Feature Mapping Review table. `scanner_col` is
+        # kept for backward compatibility; `mapped_column` is the same value under the field
+        # name the review UI reads (the scanner's pick, even when it is later UNRESOLVED).
+        entry = {'variable': var, 'scanner_col': None, 'mapped_column': None,
+                 'confidence': None, 'sanity_ok': None,
+                 'value_check': '—', 'missingness_check': '—',
+                 'scanned_value': None, 'training_value': None,
+                 'scanned_missing_pct': None, 'training_missing_pct': None,
+                 'reason': None, 'status': 'UNRESOLVED'}
         if var not in var_to_col:
             entry['reason'] = 'scanner did not assign this variable'
             unresolved.append(var); detail.append(entry); continue
         col, conf = var_to_col[var]
         entry['scanner_col'] = col
+        entry['mapped_column'] = col
         entry['confidence'] = round(conf, 3)
         conf_ok = conf >= CONFIDENCE_THRESHOLD
-        sane, reason = _sanity_check(var, df_raw.iloc[:, col], reference_stats)
+        sane, reason, extra = _sanity_check(var, df_raw.iloc[:, col], reference_stats)
+        entry.update(extra)
         entry['sanity_ok'] = sane
         entry['reason'] = reason
         if conf_ok and sane:

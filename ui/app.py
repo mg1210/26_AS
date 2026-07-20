@@ -3763,6 +3763,77 @@ elif page == "📊 D2: Data Understanding":
             needed = df_schema[df_schema["is_expected_feature"] == True]
             st.caption(f"{len(needed)} of {len(schema)} columns are features the champion model actually needs.")
 
+        # ── Feature Mapping Review (HITL) — only for the statistical-scan path (headerless) ──
+        scan_detail = p1.get("scan_detail", [])
+        scanner_used = "statistical scan" in (p1.get("alignment_method", "") or "")
+        if scan_detail and scanner_used:
+            st.divider()
+            st.subheader("Feature Mapping Review — Statistical Column Scan")
+            st.caption(
+                "This file had no headers, so the 9 champion model features were identified from raw "
+                "columns using automated statistical matching (value-band + missingness checks). Review "
+                "each mapping below; unresolved features are expanded by default."
+            )
+            n_res = sum(1 for e in scan_detail if e.get("status") == "RESOLVED")
+            n_unres = len(scan_detail) - n_res
+            m1, m2 = st.columns(2)
+            m1.metric("Resolved", n_res)
+            m2.metric("Unresolved (imputed)", n_unres)
+
+            for entry in scan_detail:
+                _status = entry.get("status", "—")
+                _icon = "✅" if _status == "RESOLVED" else "⚠️"
+                _mapped = entry.get("mapped_column")
+                _mapped_txt = _mapped if _mapped is not None else "N/A"
+                with st.expander(f"{_icon} {entry['variable']} → column {_mapped_txt}  ·  {_status}",
+                                 expanded=(_status == "UNRESOLVED")):
+                    _conf = entry.get("confidence")
+                    c1, c2, c3 = st.columns(3)
+                    c1.metric("Confidence", f"{_conf:.2f}" if isinstance(_conf, (int, float)) else "—")
+                    c2.metric("Value Check", entry.get("value_check", "—"))
+                    c3.metric("Missingness Check", entry.get("missingness_check", "—"))
+                    _sv = entry.get("scanned_value") or "—"
+                    _tv = entry.get("training_value") or "—"
+                    _smp = entry.get("scanned_missing_pct")
+                    _tmp = entry.get("training_missing_pct")
+                    _smp_txt = f"{_smp}% missing" if _smp is not None else "— missing"
+                    _tmp_txt = f"{_tmp}% missing" if _tmp is not None else "— missing"
+                    st.write(f"**Scanned:** {_sv} · {_smp_txt}")
+                    st.write(f"**Training reference:** {_tv} · {_tmp_txt}")
+                    st.write(f"**Reason:** {entry.get('reason', '—')}")
+
+                    _var = entry["variable"]
+                    col_a, col_b, col_c = st.columns(3)
+                    if col_a.button("✓ Accept", key=f"accept_{_var}"):
+                        st.session_state.setdefault("d2_mapping_overrides", {})
+                        st.session_state.d2_mapping_overrides[_var] = {
+                            "action": "accepted", "column": entry.get("mapped_column")}
+                        st.success(f"Accepted mapping for {_var}")
+                    if col_b.button("✗ Reject / Mark Unresolved", key=f"reject_{_var}"):
+                        st.session_state.setdefault("d2_mapping_overrides", {})
+                        st.session_state.d2_mapping_overrides[_var] = {"action": "rejected", "column": None}
+                        st.warning(f"Marked {_var} as unresolved — will be imputed")
+                    manual_col = col_c.number_input(
+                        "Manual column override", min_value=0,
+                        value=int(entry.get("mapped_column") or 0), key=f"manual_{_var}")
+                    if col_c.button(f"Use column {manual_col}", key=f"use_manual_{_var}"):
+                        st.session_state.setdefault("d2_mapping_overrides", {})
+                        st.session_state.d2_mapping_overrides[_var] = {
+                            "action": "manual_override", "column": int(manual_col)}
+                        st.success(f"Manually mapped {_var} to column {manual_col}")
+
+                    _ov = st.session_state.get("d2_mapping_overrides", {}).get(_var)
+                    if _ov:
+                        st.info(f"Analyst decision on record: **{_ov['action']}**"
+                                + (f" → column {_ov['column']}" if _ov.get("column") is not None else ""))
+
+            st.caption(
+                "Note: Accept/Reject/Override decisions are recorded for governance and audit, but do "
+                "**not** re-score the current run live. To apply them, re-run the Dataset 2 workflow with "
+                "'Score New Data' — matching the Cardinality Review pattern (changes save for the next run). "
+                "The predictions shown elsewhere use the automated mapping above."
+            )
+
 elif page == "🔍 D2: Data Quality Review":
     st.markdown("## Dataset 2 — Data Quality Review (Scoped)")
     st.caption("Quality review scoped ONLY to the features the champion model requires.")
