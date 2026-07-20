@@ -167,6 +167,7 @@ FALLBACK_DICTIONARY = {
     "acc_now_delinq": "The number of accounts on which the borrower is now delinquent.",
     "mths_since_last_delinq": "The number of months since the borrower's last delinquency.",
     "mths_since_last_record": "The number of months since the last public record.",
+    "mths_since_last_major_derog": "Months since most recent 90-day or worse rating.",
 }
 
 MON_RE = re.compile(r"^[A-Z][a-z]{2}-\d{2,4}$")
@@ -322,7 +323,9 @@ def sig_funded_amnt_inv(p):
     return float(np.mean(s)) * 0.9, [f"amount-like {p['min']:.0f}-{p['max']:.0f}, decimals ok"]
 
 def sig_total_rec_prncp(p):
-    if not _num_gate(p):
+    # hard gate: principal received is ~never zero for >10% of a book, while
+    # out_prncp (its complement) is zero for every matured loan.
+    if not _num_gate(p) or p["zero_share"] > 0.10:
         return 0, []
     s = [_band(p["min"], 0, 0), _band(p["max"], 20000, 45000), _band(p["med"], 4000, 12000),
          _band(p["int_share"], .5, .95, soft=1)]
@@ -380,9 +383,9 @@ def sig_dti(p):
 def sig_revol_util(p):
     if not _num_gate(p, 0.9):
         return 0, []
-    s = [_band(p["med"], 35, 65), _band(p["q99"], 85, 130), _band(p["max"], 95, 200, soft=2),
+    s = [_band(p["med"], 35, 65), _band(p["q99"], 85, 130), _band(p["gt100"], 0, .05, soft=3),
          1 - p["int_share"]]
-    return float(np.mean(s)), [f"utilization 0-{p['max']:.1f}%, median {p['med']:.1f}"]
+    return float(np.mean(s)), [f"utilization median {p['med']:.1f}, q99 {p['q99']:.1f}"]
 
 def sig_open_acc(p):
     if not _num_gate(p) or p["int_share"] < 0.99:
@@ -422,8 +425,16 @@ def sig_inq_last_6mths(p):
 def sig_mths_since_delinq(p):
     if not _num_gate(p, 0.9) or p["int_share"] < 0.95 or p["card"] < 20:
         return 0, []
-    s = [_band(p["missing"], .4, .8, soft=1), _band(p["med"], 20, 45), _band(p["max"], 60, 200, soft=1)]
+    s = [_band(p["missing"], .4, .65, soft=1), _band(p["med"], 20, 38, soft=.4),
+         _band(p["max"], 60, 200, soft=1)]
     return float(np.mean(s)) * 0.9, [f"months-since-like, {p['missing']:.0%} missing, med {p['med']:.0f}"]
+
+def sig_mths_since_major_derog(p):
+    if not _num_gate(p, 0.9) or p["int_share"] < 0.95 or p["card"] < 20:
+        return 0, []
+    s = [_band(p["missing"], .62, .9, soft=.6), _band(p["med"], 38, 60, soft=.5),
+         _band(p["max"], 100, 220, soft=1)]
+    return float(np.mean(s)) * 0.85, [f"months-since-like, {p['missing']:.0%} missing, med {p['med']:.0f}"]
 
 def sig_mths_since_record(p):
     if not _num_gate(p, 0.9) or p["int_share"] < 0.95 or p["card"] < 15:
@@ -441,9 +452,9 @@ def sig_pub_rec_bk(p):
 def sig_mort_acc(p):
     if not _num_gate(p) or p["int_share"] < 0.99:
         return 0, []
-    s = [_band(p["med"], 0.5, 3, soft=.4), _band(p["mean"], .9, 3), _band(p["max"], 8, 45, soft=1),
-         _band(p["missing"], .01, .15, soft=2)]
-    return float(np.mean(s)), [f"small int, mean {p['mean']:.2f}, {p['missing']:.1%} missing"]
+    s = [_band(p["med"], 0.5, 3, soft=.4), _band(p["mean"], .9, 3), _band(p["max"], 8, 45, soft=.15),
+         _band(p["card"], 10, 35, soft=.5), _band(p["missing"], .01, .15, soft=2)]
+    return float(np.mean(s)), [f"small int, mean {p['mean']:.2f}, card {p['card']}, {p['missing']:.1%} missing"]
 
 def sig_revol_bal(p):
     if not _num_gate(p):
@@ -458,6 +469,16 @@ def sig_tot_cur_bal(p):
     s = [_band(p["med"], 50000, 250000), _band(p["q99"], 350000, 3e6, soft=1),
          _band(p["mean"], 70000, 400000)]
     return float(np.mean(s)), [f"large balance median {p['med']:.0f}"]
+
+def sig_total_rev_hi_lim(p):
+    # gates: credit limits repeat heavily (ids don't: card_ratio), and their
+    # upper tail always reaches six figures (funded amounts cap at 35-40k: q99)
+    if not _num_gate(p) or p["int_share"] < 0.9 or p["card_ratio"] > 0.6 or p["q99"] < 60000:
+        return 0, []
+    s = [_band(p["med"], 14000, 45000), _band(p["q99"], 80000, 600000, soft=.3),
+         _band(p["max"], 150000, 2.5e6, soft=.1),
+         _band(p["zero_share"], 0, .02, soft=5), _band(p["mult1000"], 0, .3, soft=2)]
+    return float(np.mean(s)) * 0.95, [f"credit-limit-like median {p['med']:.0f}, q99 {p['q99']:.0f}"]
 
 def _vocab_sig(target, min_overlap=0.99):
     def f(p):
@@ -519,10 +540,13 @@ def sig_last_pymnt_d(p):
     return float(np.mean(s)) * 0.9, [f"lifecycle date, {p['missing']:.1%} missing"]
 
 def sig_next_pymnt_d(p):
-    if p["share_monyy"] < 0.7:
+    if p["share_monyy"] < 0.6:
         return 0, []
-    s = [_band(p["missing"], .7, 1), _band(p["card"], 1, 5, soft=2)]
-    return float(np.mean(s)) * 0.9, [f"mostly-null future date, {p['missing']:.0%} missing"]
+    # next payment: tiny cardinality (1-4 upcoming months), missing for closed
+    # loans (share depends on how many loans are still Current).
+    s = [_band(p["missing"], .25, 1, soft=.5), _band(p["card"], 1, 5, soft=1),
+         _band(p.get("year_span", 9), 0, 1, soft=2)]
+    return float(np.mean(s)) * 0.9, [f"near-term date, card {p['card']}, {p['missing']:.0%} missing"]
 
 def sig_last_credit_pull_d(p):
     if p["share_monyy"] < 0.9:
@@ -539,10 +563,13 @@ def sig_purpose(p):
     return (min(ov / 6, 1) * _band(p["card"], 8, 15), [f"snake_case categories, card {p['card']}"]) if ov else (0, [])
 
 def sig_title(p):
-    if p["num_rate"] > 0.5 or p["card"] < 60 or p["card"] > 2000:
+    # loan titles range from free text (card ~500-900) to standardized menus
+    # (card ~12-25 in later vintages); never near-unique like emp_title.
+    if p["num_rate"] > 0.5 or p["card"] < 8 or p["card"] > 2000 or p["card_ratio"] > 0.8:
         return 0, []
-    s = [_band(p["card"], 150, 900, soft=1), _band(p["avglen"], 8, 30), _band(p["card_ratio"], .05, .5, soft=1)]
-    return float(np.mean(s)) * 0.9, [f"free text, card {p['card']}, avglen {p['avglen']:.0f}"]
+    s = [_band(p["card"], 12, 900, soft=.3), _band(p["avglen"], 8, 30),
+         _band(p["share_grade"] + p["share_subgrade"] + p["share_monyy"], 0, 0)]
+    return float(np.mean(s)) * 0.9, [f"loan-title text, card {p['card']}, avglen {p['avglen']:.0f}"]
 
 def sig_emp_title(p):
     if p["num_rate"] > 0.5 or p["card"] < 300:
@@ -595,10 +622,12 @@ SIGNATURES = {
     "delinq_2yrs": sig_delinq_2yrs, "inq_last_6mths": sig_inq_last_6mths,
     "mths_since_last_delinq": sig_mths_since_delinq,
     "mths_since_last_record": sig_mths_since_record,
+    "mths_since_last_major_derog": sig_mths_since_major_derog,
     "last_pymnt_d": sig_last_pymnt_d, "next_pymnt_d": sig_next_pymnt_d,
     "last_credit_pull_d": sig_last_credit_pull_d,
     "zip_code": sig_zip_code, "addr_state": sig_addr_state,
     "pymnt_plan": sig_pymnt_plan, "policy_code": sig_policy_code,
+    "total_rev_hi_lim": sig_total_rev_hi_lim,
 }
 
 # Generic description-driven signature for dictionary variables we have no
@@ -785,59 +814,131 @@ def relational_checks(df, mapping):
 
     # 3b. Near-duplicate twin columns (e.g. *_inv variants): informational.
     numcols = [c for c in df.columns if clean_numeric(df[c]).notna().mean() > 0.9]
-    twins = []
+    twins, twin_pairs = [], []
     for a_i, a in enumerate(numcols):
         for b in numcols[a_i + 1:]:
             x, y = clean_numeric(df[a]), clean_numeric(df[b])
             if x.std() > 0 and y.std() > 0 and x.corr(y) > 0.999:
                 twins.append(f"col{a}~col{b}")
+                twin_pairs.append((a, b))
     if twins:
         checks.append(("near-duplicate column pairs (corr>0.999, *_inv style)", True,
                        ", ".join(twins[:8])))
+    # If total_pymnt is labeled and its twin is unlabeled, the dominant column
+    # is the total and the twin is the *_inv variant.
+    for a, b in twin_pairs:
+        lab = {mapping.get(a, {}).get("variable"), mapping.get(b, {}).get("variable")}
+        if "total_pymnt" in lab and None in lab:
+            x, y = clean_numeric(df[a]), clean_numeric(df[b])
+            dom_col, sub_col = (a, b) if (x >= y).mean() >= (y >= x).mean() else (b, a)
+            conf = mapping.get(a, mapping.get(b))["confidence"]
+            mapping[dom_col] = {"variable": "total_pymnt", "confidence": conf,
+                                "evidence": [f"dominant twin of col {sub_col}"]}
+            mapping[sub_col] = {"variable": "total_pymnt_inv", "confidence": conf,
+                                "evidence": [f"near-duplicate (investor share) of col {dom_col}"]}
+            col_of = {m["variable"]: c for c, m in mapping.items()}
 
-    # 3c. Rare-count role resolution: delinq_2yrs / pub_rec / pub_rec_bankruptcies
-    # have near-identical marginal profiles. Resolve roles by co-occurrence with
-    # their companion columns: delinq_2yrs>0 implies mths_since_last_delinq is
-    # populated; pub_rec>0 implies mths_since_last_record is populated.
-    fam_cols = [col_of[v] for v in ("delinq_2yrs", "pub_rec", "pub_rec_bankruptcies")
-                if v in col_of]
+    # 3c. Rare-count family role resolution. delinq_2yrs / pub_rec /
+    # pub_rec_bankruptcies / inq_last_6mths / acc_now_delinq / collections all
+    # share a "small mostly-zero integer" marginal profile. Resolve roles with
+    # companion-column evidence AND rate-matching:
+    #   - delinq_2yrs>0 implies mths_since_last_delinq populated, and
+    #     P(delinq_2yrs>0) ~= P(mths_since_last_delinq <= 24)
+    #   - pub_rec>0 implies mths_since_last_record populated, and
+    #     P(pub_rec>0) ~= P(mths_since_last_record populated)
+    FAMILY = ("delinq_2yrs", "pub_rec", "pub_rec_bankruptcies", "inq_last_6mths")
     helpers = {}
     if "mths_since_last_delinq" in col_of:
-        helpers["delinq_2yrs"] = clean_numeric(df[col_of["mths_since_last_delinq"]]).notna()
+        md = clean_numeric(df[col_of["mths_since_last_delinq"]])
+        helpers["delinq_2yrs"] = (md.notna(), float((md <= 24).mean()))
     if "mths_since_last_record" in col_of:
-        helpers["pub_rec"] = clean_numeric(df[col_of["mths_since_last_record"]]).notna()
-    if len(fam_cols) >= 2 and helpers:
-        aff = {}
-        for c in fam_cols:
-            pos = clean_numeric(df[c]) > 0
-            aff[c] = {role: (float(ind[pos].mean()) if pos.any() else 0.0)
-                      for role, ind in helpers.items()}
-        roles, remaining = {}, set(fam_cols)
+        mr = clean_numeric(df[col_of["mths_since_last_record"]])
+        helpers["pub_rec"] = (mr.notna(), float(mr.notna().mean()))
+    if helpers:
+        # candidates: currently family-labeled cols + unassigned rare-int cols
+        # + mort_acc-labeled cols (mort_acc's profile overlaps the family and
+        # can steal the inquiries column; role evidence adjudicates below).
+        cand = {c for c in df.columns
+                if (c in mapping and mapping[c]["variable"] in FAMILY + ("mort_acc",))
+                or c not in mapping}
+        def rare_int(c):
+            d = clean_numeric(df[c]).dropna()
+            return (len(d) > 0 and len(d) / max(df[c].notna().sum(), 1) > 0.95 and
+                    (d == d.round()).mean() >= 0.99 and d.median() <= 1.5 and
+                    d.max() <= 40 and 2 <= d.nunique() <= 25)
+        cand = [c for c in sorted(cand) if rare_int(c)]
+        # content-keyed tie-break: identical role scores must resolve the same
+        # way regardless of column order
+        ckey = {c: hashlib.md5("\x1f".join(df[c].fillna("\x00").astype(str)).encode()).hexdigest()
+                for c in cand}
+        roles, notes_roles = {}, {}
+        remaining = set(cand)
         for role in ("delinq_2yrs", "pub_rec"):
-            if role in helpers and remaining:
-                best = max(remaining, key=lambda c: aff[c].get(role, 0))
-                if aff[best].get(role, 0) >= 0.5:
-                    roles[best] = role
-                    remaining.discard(best)
-        if len(remaining) == 1 and "pub_rec_bankruptcies" not in roles.values():
-            roles[remaining.pop()] = "pub_rec_bankruptcies"
-        old_labels = {c: mapping[c]["variable"] for c in fam_cols}
-        if roles and any(old_labels[c] != r for c, r in roles.items()):
-            for c in fam_cols:               # clear family labels, then relabel
-                if c in roles:
-                    mapping[c]["variable"] = roles[c]
-                    mapping[c]["evidence"] = mapping[c]["evidence"] + [
-                        f"role via companion-column co-occurrence "
-                        f"{ {k: round(v, 2) for k, v in aff[c].items()} }"]
-                elif mapping[c]["variable"] in ("delinq_2yrs", "pub_rec", "pub_rec_bankruptcies"):
-                    del mapping[c]           # label had no evidence to survive
-            col_of = {m["variable"]: c for c, m in mapping.items()}
-            checks.append(("rare-count roles via mths_since_* co-occurrence (relabeled)", True,
-                           " | ".join(f"col{c}={r}" for c, r in roles.items())))
-        else:
-            checks.append(("rare-count roles via mths_since_* co-occurrence", True,
-                           " | ".join(f"col{c}={old_labels[c]} aff={ {k: round(v, 2) for k, v in aff[c].items()} }"
-                                      for c in fam_cols)))
+            if role not in helpers or not remaining:
+                continue
+            ind, target_rate = helpers[role]
+            best, best_k = None, (0.0, "")
+            for c in remaining:
+                pos = clean_numeric(df[c]) > 0
+                if not pos.any():
+                    continue
+                co = float(ind[pos].mean())
+                pr = float(pos.mean())
+                ratio = min(pr, target_rate) / max(pr, target_rate) if max(pr, target_rate) > 0 else 0
+                k = (co * ratio, ckey[c])
+                if k > best_k:
+                    best, best_k = c, k
+            if best is not None and best_k[0] >= 0.35:
+                roles[best] = role
+                notes_roles[best] = f"role via companion co-occurrence x rate-match (score {best_k[0]:.2f})"
+                remaining.discard(best)
+        if "pub_rec" in roles.values() and remaining:
+            pub_c = next(c for c, r in roles.items() if r == "pub_rec")
+            pub_rate = float((clean_numeric(df[pub_c]) > 0).mean())
+            best, best_k = None, (0.0, "")
+            for c in remaining:
+                sc_bk, _ = sig_pub_rec_bk(profile_column(df[c]))
+                le = (clean_numeric(df[c]) <= clean_numeric(df[pub_c])).mean()
+                pr = float((clean_numeric(df[c]) > 0).mean())
+                tgt = 0.7 * pub_rate     # bankruptcies drive ~70% of public records
+                rate_ok = (min(pr, tgt) / max(pr, tgt)) if max(pr, tgt) > 0 else 0
+                if sc_bk >= 0.55 and le >= 0.9 and rate_ok >= 0.25 and (sc_bk, ckey[c]) > best_k:
+                    best, best_k = c, (sc_bk, ckey[c])
+            if best is not None:
+                roles[best] = "pub_rec_bankruptcies"
+                notes_roles[best] = ("best remaining rare-count match with plausible rate vs pub_rec "
+                                     "(NOTE: collections/tax_liens have similar profiles — tentative)")
+                remaining.discard(best)
+        if remaining:
+            best, best_k = None, (0.0, "")
+            for c in remaining:
+                sc_i, _ = sig_inq_last_6mths(profile_column(df[c]))
+                if sc_i >= 0.55 and (sc_i, ckey[c]) > best_k:
+                    best, best_k = c, (sc_i, ckey[c])
+            best_s = best_k[0]
+            if best is not None:
+                roles[best] = "inq_last_6mths"
+                notes_roles[best] = f"inquiry-profile match among remaining candidates (score {best_s:.2f})"
+                if mapping.get(best, {}).get("variable") == "mort_acc":
+                    # overwrite a non-family label only when the incumbent's own
+                    # signature is weaker on this column than the new role's
+                    if sig_mort_acc(profile_column(df[best]))[0] >= best_s:
+                        roles.pop(best); notes_roles.pop(best)
+        changed = False
+        for c in cand:
+            old = mapping.get(c, {}).get("variable")
+            new = roles.get(c)
+            if new and old != new:
+                base_conf = mapping.get(c, {}).get("confidence", 0.8)
+                mapping[c] = {"variable": new, "confidence": base_conf,
+                              "evidence": [notes_roles[c]]}
+                changed = True
+            elif new is None and old in FAMILY:
+                del mapping[c]          # label had no surviving evidence
+                changed = True
+        col_of = {m["variable"]: c for c, m in mapping.items()}
+        checks.append((f"rare-count family roles via companion evidence{' (relabeled)' if changed else ''}",
+                       True, " | ".join(f"col{c}={r}" for c, r in sorted(roles.items())) or "no roles met threshold"))
 
     # 3d. pub_rec >= pub_rec_bankruptcies row-wise (bankruptcies are a subset
     # of public records); swap if reversed.
@@ -851,6 +952,29 @@ def relational_checks(df, mapping):
             checks.append(("pub_rec >= pub_rec_bankruptcies (auto-swapped)", True, "order corrected"))
         else:
             checks.append(("pub_rec >= pub_rec_bankruptcies row-wise", bool(ok > 0.9), f"{ok:.2%} of rows"))
+
+    # 3e. Revolving identity: revol_util ~= 100 * revol_bal / total_rev_hi_lim.
+    # An algebraic cross-check that also fixes a bal<->lim role swap.
+    if all(v in col_of for v in ("revol_bal", "total_rev_hi_lim", "revol_util")):
+        util = num("revol_util")
+        def ident_err(bal_c, lim_c):
+            lim = clean_numeric(df[lim_c]).replace(0, np.nan)
+            return ((100 * clean_numeric(df[bal_c]) / lim) - util).abs().median()
+        cur = ident_err(col_of["revol_bal"], col_of["total_rev_hi_lim"])
+        swp = ident_err(col_of["total_rev_hi_lim"], col_of["revol_bal"])
+        if swp < cur * 0.5:
+            mapping[col_of["revol_bal"]]["variable"], mapping[col_of["total_rev_hi_lim"]]["variable"] = \
+                "total_rev_hi_lim", "revol_bal"
+            col_of = {m["variable"]: c for c, m in mapping.items()}
+            cur = swp
+            checks.append(("revolving identity roles (auto-swapped bal<->lim)", True,
+                           f"median |util - 100*bal/lim| = {cur:.2f} pts"))
+        else:
+            checks.append(("revol_util ~= 100*revol_bal/total_rev_hi_lim", bool(cur < 5),
+                           f"median abs deviation {cur:.2f} pts"))
+        share = (clean_numeric(df[col_of["revol_bal"]]) <=
+                 clean_numeric(df[col_of["total_rev_hi_lim"]])).mean()
+        checks.append(("revol_bal <= total_rev_hi_lim row-wise", bool(share > 0.95), f"{share:.2%} of rows"))
 
     # 4. sub_grade starts with grade
     if all(v in col_of for v in ("grade", "sub_grade")):
@@ -960,8 +1084,24 @@ def main():
 
     df = pd.read_csv(args.csv, header=None, dtype=str)
     profiles = [profile_column(df[c]) for c in df.columns]
+
+    # Exact-duplicate column groups: content-identical columns are mutually
+    # indistinguishable, so labels within a group are interchangeable.
+    by_hash = {}
+    for c in df.columns:
+        h = hashlib.md5("\x1f".join(df[c].fillna("\x00").astype(str)).encode()).hexdigest()
+        by_hash.setdefault(h, []).append(c)
+    dup_groups = [cols for cols in by_hash.values() if len(cols) > 1 and
+                  not profiles[cols[0]].get("empty")]
+
     mapping, score, vars_ = assign(dictionary, profiles)
     checks, mapping = relational_checks(df, mapping)
+    for grp in dup_groups:
+        for c in grp:
+            if c in mapping:
+                others = [o for o in grp if o != c]
+                mapping[c]["evidence"] = mapping[c]["evidence"] + [
+                    f"EXACT DUPLICATE of col(s) {others} — labels within this group are interchangeable"]
     features, notes = build_features(df, mapping, resolution)
 
     # ---- outputs ----
@@ -1033,6 +1173,11 @@ def main():
               (f"- {len(ragged)} malformed/truncated row(s) (>50% fields empty) at index(es) "
                f"{ragged[:10]} — emitted with NaNs; drop before scoring."
                if ragged else "- no malformed/truncated rows detected.")]
+    if empty_cols:
+        lines.append(f"- {len(empty_cols)} fully-empty column(s): {empty_cols} — carry no signal, never assigned.")
+    if dup_groups:
+        lines.append(f"- exact-duplicate column group(s): {dup_groups} — content-identical; "
+                     f"labels within a group are interchangeable.")
 
     lines += ["", "## Feature build log", ""]
     for feat in list(resolution) + (["loan_status__label"] if "loan_status__label" in notes else []):

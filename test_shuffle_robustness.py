@@ -46,6 +46,17 @@ def main():
     df = pd.read_csv(args.csv, header=None, dtype=str)
     df = df[df.isna().mean(axis=1) <= 0.5]  # drop malformed/truncated rows
 
+    # Exact-duplicate column groups: content-identical columns are mutually
+    # indistinguishable, so a label swap WITHIN such a group is not a failure.
+    group_of = {}
+    by_key = {}
+    for c in df.columns:
+        by_key.setdefault(tuple(df[c].fillna("\x00")), []).append(c)
+    for gid, cols in enumerate(by_key.values()):
+        if len(cols) > 1:
+            for c in cols:
+                group_of[c] = gid
+
     tmp = tempfile.mkdtemp(prefix="shuffle_test_")
     try:
         # Baseline must scan the SAME cleaned rows the shuffles are built from,
@@ -59,12 +70,28 @@ def main():
             shuf_csv = os.path.join(tmp, f"shuf_{seed}.csv")
             df[perm].to_csv(shuf_csv, index=False, header=False)
             got = run_scanner(shuf_csv, os.path.join(tmp, f"out_{seed}"), args)
-            mism = [(j, base[perm[j]], got.get(j))
-                    for j in range(df.shape[1]) if got.get(j) != base[perm[j]]]
+            mism, twin_swaps = [], []
+            for j in range(df.shape[1]):
+                exp = base[perm[j]]
+                if got.get(j) == exp:
+                    continue
+                # equivalent if the original column sits in a duplicate group and
+                # both labels belong to that group's label set in both runs
+                g = group_of.get(perm[j])
+                if g is not None:
+                    grp_cols = [c for c, gg in group_of.items() if gg == g]
+                    base_labels = {base[c] for c in grp_cols}
+                    got_labels = {got.get(int(np.where(perm == c)[0][0])) for c in grp_cols}
+                    if base_labels == got_labels and got.get(j) in base_labels:
+                        twin_swaps.append((j, exp, got.get(j)))
+                        continue
+                mism.append((j, exp, got.get(j)))
             ok = not mism
             ok_all &= ok
-            print(f"seed {seed}: " + ("IDENTICAL mapping under shuffle" if ok
-                                      else f"MISMATCHES {mism}"))
+            msg = "IDENTICAL mapping under shuffle" if ok else f"MISMATCHES {mism}"
+            if twin_swaps:
+                msg += f" (equivalent swaps within exact-duplicate groups: {twin_swaps})"
+            print(f"seed {seed}: {msg}")
         print("ROBUSTNESS:", "PASS — scanner is order-invariant" if ok_all else "FAIL")
         sys.exit(0 if ok_all else 1)
     finally:
