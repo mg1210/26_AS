@@ -741,66 +741,12 @@ if page == "Home":
                          f"Full log (stdout + stderr):")
                 st.code("\n".join(log_lines[-300:]) or "(no output captured)")
 
-        # ── Section 2 — New Data scoring ───────────────────────────────
+        # ── Section 2 — Dataset 2 blind scoring workflow ───────────────
         st.markdown("---")
-        st.subheader("New Data — Model Scoring")
-        st.caption("Upload any new dataset to score using the fixed champion model. The system will "
-                   "automatically map features and compute performance metrics if a target column is present.")
-
-        model_files = sorted(glob.glob("outputs/models/*_champion_*.pkl"), reverse=True)
-        if model_files:
-            st.success(f"✓ Champion model available: {os.path.basename(model_files[0])}")
-        else:
-            st.warning("⚠ No trained model found — run Dataset 1 pipeline first")
-
-        uploaded_new = st.file_uploader("Upload New Data (CSV)", type=["csv"], key="new_data_upload")
-        if uploaded_new:
-            import tempfile
-            # Save to a temp file — the dataset can live anywhere, not just data/.
-            # Guarded so a fresh temp dir isn't created on every Streamlit rerun.
-            if st.session_state.get("_new_data_name") != uploaded_new.name:
-                tmp_dir = tempfile.mkdtemp()
-                new_path = os.path.join(tmp_dir, uploaded_new.name)
-                with open(new_path, "wb") as f:
-                    f.write(uploaded_new.getbuffer())
-                st.session_state.new_data_path = new_path
-                st.session_state._new_data_name = uploaded_new.name
-            st.success(f"✓ New data ready: {uploaded_new.name} ({uploaded_new.size/1e6:.1f} MB)")
-
-        score_btn = st.button("▶ Score New Data",
-            disabled=IS_CLOUD or not st.session_state.get("new_data_path") or not model_files,
-            use_container_width=True)
-
-        if score_btn and st.session_state.get("new_data_path"):
-            with st.spinner("Scoring new data..."):
-                result = subprocess.run(
-                    [sys.executable, os.path.join(PROJECT_ROOT, "evaluate_oot.py"),
-                     "--dataset", st.session_state.new_data_path],
-                    capture_output=True, text=True, encoding='utf-8', errors='replace',
-                    cwd=PROJECT_ROOT,
-                    env=dict(os.environ, PYTHONUTF8="1", PYTHONIOENCODING="utf-8"),
-                )
-            if result.returncode == 0:
-                st.success("✓ Scoring complete!")
-                st.code(result.stdout[-2000:])
-                for line in result.stdout.split('\n'):
-                    if line.startswith('AUDIT_PATH:'):
-                        st.session_state.current_audit_path = line.replace('AUDIT_PATH:', '').strip()
-                r, rpt = load_latest_results()
-                if r:
-                    st.session_state.results = r
-                    st.session_state.report = rpt
-                    st.session_state.has_run = True
-                    st.rerun()
-            else:
-                st.error(f"Scoring failed (exit code {result.returncode})")
-                st.code((result.stdout or "")[-3000:])
-                st.code((result.stderr or "")[-3000:])
-
-        # ── Section 3 — Dataset 2 blind scoring (4-phase workflow) ─────
-        st.markdown("---")
-        st.subheader("Dataset 2 — Blind Scoring Workflow (4 Phases)")
-        st.caption("Upload Dataset 2 to run it through Data Understanding, Scoped Data Quality Review, Prediction, and Validation — using the fixed champion model from Dataset 1.")
+        st.subheader("Dataset 2 — Blind Scoring Workflow")
+        st.caption("Upload Dataset 2 to run it through the full blind-scoring workflow — Data Understanding, "
+                   "Scoped Data Quality Review, Feature Reconstruction, Stability, Explainability, Prediction, "
+                   "Validation, Fairness, and Documentation — using the fixed champion model from Dataset 1.")
 
         model_files_d2 = sorted(glob.glob("outputs/models/*_champion_*.pkl"), reverse=True)
         if not model_files_d2:
@@ -821,7 +767,7 @@ if page == "Home":
             st.success(f"✓ Dataset 2 ready: {uploaded_d2.name} ({uploaded_d2.size/1e6:.1f} MB)")
             st.session_state.dataset2_workflow_path = d2_path
 
-        run_d2_btn = st.button("▶ Run Dataset 2 — 4 Phase Workflow",
+        run_d2_btn = st.button("▶ Run Dataset 2 — Blind Scoring Workflow",
             disabled=not st.session_state.get("dataset2_workflow_path") or not model_files_d2 or IS_CLOUD,
             use_container_width=True)
 
@@ -845,7 +791,7 @@ if page == "Home":
                 _d2_headerless = False
             _spin_msg = ("Running full statistical column scan on headerless file — this may take "
                          "several minutes for large files." if _d2_headerless
-                         else "Running 8-phase Dataset 2 workflow...")
+                         else "Running Dataset 2 blind scoring workflow...")
             with st.spinner(_spin_msg):
                 cmd = [sys.executable, os.path.join(PROJECT_ROOT, "agents", "dataset2_pipeline.py"),
                        "--dataset", st.session_state.dataset2_workflow_path]
@@ -953,26 +899,6 @@ if page == "Home":
             st.write("5. Model Development — trains 4 models, selects champion")
             st.write("6. Explainability — SHAP values and adverse action codes")
             st.write("7. Validation — discriminatory power, stability, sign-off")
-
-    # ── New Data scoring results (full width) ──────────────────────────
-    new_eval = data.get('new_data_evaluation') if data else None
-    if new_eval:
-        st.markdown("---")
-        st.subheader("New Data Scoring Results")
-        c1, c2, c3, c4, c5 = st.columns(5)
-        c1.metric("Dataset", new_eval.get('dataset', '—'))
-        c2.metric("Records Scored", f"{new_eval.get('total_records', 0):,}")
-        if new_eval.get('has_metrics'):
-            c3.metric("AUC (New Data)",  new_eval.get('auc_new_data',  '—'))
-            c4.metric("Gini (New Data)", new_eval.get('gini_new_data', '—'))
-            c5.metric("KS (New Data)",   new_eval.get('ks_new_data',   '—'))
-        else:
-            c3.metric("Avg Score", new_eval.get('score_mean', '—'))
-            c4.metric("Min Score", new_eval.get('score_min', '—'))
-            c5.metric("Max Score", new_eval.get('score_max', '—'))
-        if new_eval.get('missing_features'):
-            st.warning(f"⚠ {len(new_eval['missing_features'])} features were missing in new data and "
-                       f"imputed with 0: {new_eval['missing_features']}")
 
     # Pipeline progress tracker
     if st.session_state.has_run:
