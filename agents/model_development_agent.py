@@ -151,9 +151,9 @@ class ModelDevelopmentAgent(BaseAgent):
                 f"Champion overfit (train-test AUC delta): {champ_m.get('overfit', 'N/A')}",
             ],
             reasoning=state.model_selection_rationale or (
-                "Champion selected via AUC on held-out test set with overfit penalty: "
-                "score = auc_test - max(0, overfit - 0.03) * 2. "
-                "Penalises models with train-test gap > 3pp to favour generalisable models."
+                f"Champion selection method: {state.champion_selection_method}. "
+                "Algorithmic basis: score = auc_test - max(0, overfit - 0.03) * 2, "
+                "penalising models with train-test gap > 3pp to favour generalisable models."
             ),
             recommendations=[
                 "Validate champion model on an independent out-of-time sample",
@@ -170,7 +170,7 @@ class ModelDevelopmentAgent(BaseAgent):
             title="Champion Model Selection",
             recommendation=f"{champ} selected as champion model",
             rationale=state.model_selection_rationale or (
-                f"Champion selected via AUC on held-out test set with overfit penalty. "
+                f"Selection method: {state.champion_selection_method}. "
                 f"AUC={champ_auc:.4f}, overfit delta={champ_overfit:.4f}."
             ),
             confidence=champ_auc,
@@ -598,11 +598,43 @@ class ModelDevelopmentAgent(BaseAgent):
             penalty = max(0, m["overfit"] - 0.03) * 2
             scores[name] = m["auc_test"] - penalty
 
-        champion = max(scores, key=scores.get)
+        # Algorithmic champion — highest AUC with an overfit penalty. Always computed so that,
+        # even under a demo lock, we can record what the algorithm WOULD have chosen.
+        algo_champion = max(scores, key=scores.get)
+
+        # ── Optional DEMO LOCK override (temporary, hackathon-only) ──────────────────────────
+        # DEMO_LOCK_CHAMPION pins which trained model is *labelled* champion, exactly like the
+        # existing manual champion-override dropdown — but automatically, on every run. It does
+        # NOT touch training or metrics: all 5 models still train with real, honest numbers; this
+        # only overrides the final label. It is loudly flagged in the terminal AND the audit trail
+        # so the choice is never mistaken for a natural algorithmic selection. Unset the env var
+        # to fully restore algorithmic selection (nothing else to revert).
+        demo_lock = os.environ.get("DEMO_LOCK_CHAMPION", "").strip()
+        if demo_lock and demo_lock in state.model_metrics:
+            champion = demo_lock
+            state.champion_selection_method = f"DEMO LOCK via DEMO_LOCK_CHAMPION env var (algorithmic choice was {algo_champion})"
+            msg = (f"DEMO LOCK ACTIVE: Champion manually fixed to '{demo_lock}' via DEMO_LOCK_CHAMPION "
+                   f"env var (all 5 models still trained normally with real metrics; this only "
+                   f"overrides final selection for demo consistency). Algorithmic selection would "
+                   f"have chosen '{algo_champion}' (adj.score={scores[algo_champion]:.4f}).")
+            self._info("  " + msg)
+            state.log_warning(self.name, msg)
+            state.log_audit(self.name, "DEMO LOCK champion override", msg)
+        else:
+            if demo_lock:  # set, but not a trained model name — ignore, don't fail
+                warn = (f"DEMO_LOCK_CHAMPION='{demo_lock}' is not among trained models "
+                        f"{list(state.model_metrics.keys())}; ignoring and using algorithmic selection.")
+                self._info("  " + warn)
+                state.log_warning(self.name, warn)
+                state.log_audit(self.name, "DEMO LOCK ignored", warn)
+            champion = algo_champion
+            state.champion_selection_method = "algorithmic (AUC with overfit penalty)"
+
         state.champion_model_name = champion
         state.champion_model      = state.trained_models[champion]
 
-        self._info(f"Champion: {champion}  (adj.score={scores[champion]:.4f})")
+        self._info(f"Champion: {champion}  (adj.score={scores[champion]:.4f})  "
+                   f"[selection: {state.champion_selection_method}]")
         for n, s in scores.items():
             self._info(f"  {n}: adj={s:.4f}  "
                        f"AUC={state.model_metrics[n]['auc_test']:.4f}  "
@@ -624,8 +656,11 @@ MODEL COMPARISON:
 {metrics_text}
 
 SELECTED CHAMPION: {state.champion_model_name}
+SELECTION METHOD: {state.champion_selection_method}
 
 Write a Model Selection Rationale (max 200 words) for the model development report.
+If the selection method indicates a manual or demo-lock override rather than algorithmic
+selection, state that transparently — do NOT imply the metrics alone drove the choice.
 Address:
 1. Why the champion was selected (performance, stability, interpretability)
 2. Trade-offs vs the other candidates

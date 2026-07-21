@@ -77,6 +77,7 @@ class PipelineState:
     champion_model: Any = None
     champion_model_path: str = ""                           # persisted champion .pkl for scoring new data
     model_selection_rationale: str = ""
+    champion_selection_method: str = "algorithmic (AUC with overfit penalty)"  # or a demo-lock override
     optuna_trials_run: int = 0                              # actual number of Optuna trials executed
     optuna_trials_history: dict = field(default_factory=dict)  # best/worst/top-3 trial summary
 
@@ -213,6 +214,7 @@ class PipelineState:
             # ── Phase 5: Model development ───────────────────────────
             "champion_model_name":       self.champion_model_name,
             "champion_model_path":       self.champion_model_path,
+            "champion_selection_method": self.champion_selection_method,
             "model_selection_rationale": self.model_selection_rationale,
             "model_metrics":             _safe(self.model_metrics) or {},
             "optuna_trials_run":         self.optuna_trials_run,
